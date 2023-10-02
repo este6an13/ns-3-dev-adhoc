@@ -12,6 +12,7 @@ build_lib(
     model/gauss-markov-mobility-model.cc
     model/geographic-positions.cc
     model/hierarchical-mobility-model.cc
+    model/levy-flight-2d-mobility-model.cc
     model/mobility-model.cc
     model/position-allocator.cc
     model/random-direction-2d-mobility-model.cc
@@ -33,6 +34,7 @@ build_lib(
     model/gauss-markov-mobility-model.h
     model/geographic-positions.h
     model/hierarchical-mobility-model.h
+    model/levy-flight-2d-mobility-model.h
     model/mobility-model.h
     model/position-allocator.h
     model/random-direction-2d-mobility-model.h
