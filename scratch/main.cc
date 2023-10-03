@@ -1,70 +1,55 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/point-to-point-module.h"
 #include "ns3/internet-module.h"
-
-#include "levy-flight-2d-mobility-model.h"
+#include "ns3/point-to-point-module.h"
 
 using namespace ns3;
 
-int main(int argc, char *argv[])
+NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
+
+int main (int argc, char *argv[])
 {
-    CommandLine cmd;
-    cmd.Parse(argc, argv);
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
 
-    NodeContainer nodes;
-    nodes.Create(1);
+  Time::SetResolution (Time::NS);
+  LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_INFO);
 
-    // Install Internet stack
-    InternetStackHelper internet;
-    internet.Install(nodes);
+  NodeContainer nodes;
+  nodes.Create (2); // Creating 10 nodes
 
-    // Install Mobility model
-    Ptr<LevyFlight2dMobilityModel> mobility = CreateObject<LevyFlight2dMobilityModel>();
-    mobility->SetBounds(Rectangle(0.0, 100.0, 0.0, 100.0));
-    mobility->SetStepSize(10.0);
-    mobility->SetAlpha(2.0);
+  MobilityHelper mobility;
+  mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+                                 "MinX", DoubleValue (0.0),
+                                 "MinY", DoubleValue (0.0),
+                                 "DeltaX", DoubleValue (5.0),
+                                 "DeltaY", DoubleValue (5.0),
+                                 "GridWidth", UintegerValue (3),
+                                 "LayoutType", StringValue ("RowFirst"));
+  mobility.SetMobilityModel ("ns3::LevyFlight2dMobilityModel",
+                             "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
 
-    nodes.Get(0)->AggregateObject(mobility);
+  mobility.Install (nodes);
 
-    // Install a simple point-to-point link
-    PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
+  InternetStackHelper internet;
+  internet.Install (nodes);
 
-    NetDeviceContainer devices;
-    devices = pointToPoint.Install(nodes);
+  PointToPointHelper p2p;
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
 
-    // Assign IP addresses
-    Ipv4AddressHelper address;
-    address.SetBase("10.1.1.0", "255.255.255.0");
-    Ipv4InterfaceContainer interfaces = address.Assign(devices);
+  NetDeviceContainer devices;
+  devices = p2p.Install (nodes.Get (0), nodes.Get (1));
 
-    // Create a packet sink at the receiver
-    PacketSinkHelper packetSinkHelper("ns3::UdpSocketFactory", InetSocketAddress(interfaces.GetAddress(1)));
-    ApplicationContainer sinkApps = packetSinkHelper.Install(nodes.Get(0));
-    sinkApps.Start(Seconds(0.0));
-    sinkApps.Stop(Seconds(10.0));
+  Ipv4AddressHelper address;
+  address.SetBase ("10.1.1.0", "255.255.255.0");
 
-    // Create a UdpClient application to send UDP packets from node 0 to node 1
-    OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(interfaces.GetAddress(1), 9));
-    onoff.SetConstantRate(DataRate("1Mbps"));
-    onoff.SetAttribute("PacketSize", UintegerValue(1024));
+  Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
-    ApplicationContainer apps = onoff.Install(nodes.Get(0));
-    apps.Start(Seconds(1.0));
-    apps.Stop(Seconds(10.0));
+  Simulator::Stop (Seconds (10));
+  Simulator::Run ();
+  Simulator::Destroy ();
 
-    // Configure tracing
-    AsciiTraceHelper ascii;
-    pointToPoint.EnableAsciiAll(ascii.CreateFileStream("levy-flight-trace.tr"));
-
-    Simulator::Stop(Seconds(10.0));
-
-    // Run the simulation
-    Simulator::Run();
-    Simulator::Destroy();
-
-    return 0;
+  return 0;
 }
