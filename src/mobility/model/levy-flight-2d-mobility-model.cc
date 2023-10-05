@@ -43,12 +43,12 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
             .AddConstructor<LevyFlight2dMobilityModel>()
             .AddAttribute("Bounds",
                           "Bounds of the area to cruise.",
-                          RectangleValue(Rectangle(0.0, 100.0, 0.0, 100.0)),
+                          RectangleValue(Rectangle(0.0, 10000.0, 0.0, 10000.0)),
                           MakeRectangleAccessor(&LevyFlight2dMobilityModel::m_bounds),
                           MakeRectangleChecker())
             .AddAttribute("StepSize",
                           "Step size of the Levy flight.",
-                          DoubleValue(10.0),
+                          DoubleValue(1.0),
                           MakeDoubleAccessor(&LevyFlight2dMobilityModel::m_stepSize),
                           MakeDoubleChecker<double>())
             .AddAttribute("Alpha",
@@ -90,8 +90,8 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     // Levy flight implementation
     double stepLength = m_stepSize * std::pow(m_direction->GetValue(), -1.0 / m_alpha);
     Vector newPosition = position;
-    newPosition.x += vector.x * stepLength;
-    newPosition.y += vector.y * stepLength;
+    newPosition.x += std::cos(direction) * stepLength; // Corrected calculation
+    newPosition.y += std::sin(direction) * stepLength;
 
     std::cout << newPosition.x << " " << newPosition.y << "\n";
 

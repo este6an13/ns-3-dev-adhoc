@@ -116,6 +116,9 @@ RandomWalk2dMobilityModel::DoWalk(Time delayLeft)
     Vector nextPosition = position;
     nextPosition.x += speed.x * delayLeft.GetSeconds();
     nextPosition.y += speed.y * delayLeft.GetSeconds();
+
+    std::cout << nextPosition.x << " " << nextPosition.y << "\n";
+
     m_event.Cancel();
     if (m_bounds.IsInside(nextPosition))
     {

@@ -8,6 +8,19 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
 
+void LogNodePositions (NodeContainer& nodes)
+{
+  for (uint32_t i = 0; i < nodes.GetN (); ++i)
+  {
+    Ptr<MobilityModel> mobility = nodes.Get (i)->GetObject<MobilityModel> ();
+    Vector position = mobility->GetPosition ();
+    NS_LOG_INFO ("Node " << i << " Position: " << position);
+  }
+
+  // Schedule the next logging event
+  Simulator::Schedule (Seconds (1), &LogNodePositions, nodes);
+}
+
 int main (int argc, char *argv[])
 {
   CommandLine cmd;
@@ -27,8 +40,7 @@ int main (int argc, char *argv[])
                                  "DeltaY", DoubleValue (5.0),
                                  "GridWidth", UintegerValue (3),
                                  "LayoutType", StringValue ("RowFirst"));
-  mobility.SetMobilityModel ("ns3::LevyFlight2dMobilityModel",
-                             "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
+  mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel");
 
   mobility.Install (nodes);
 
@@ -47,8 +59,11 @@ int main (int argc, char *argv[])
 
   Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
+
+  Simulator::Schedule (Seconds (1), &LogNodePositions, std::ref(nodes));  
   Simulator::Stop (Seconds (10));
   Simulator::Run ();
+
   Simulator::Destroy ();
 
   return 0;
