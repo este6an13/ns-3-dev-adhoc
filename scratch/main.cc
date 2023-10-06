@@ -33,14 +33,14 @@ int main (int argc, char *argv[])
   nodes.Create (2); // Creating 10 nodes
 
   MobilityHelper mobility;
-  mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                 "MinX", DoubleValue (0.0),
-                                 "MinY", DoubleValue (0.0),
-                                 "DeltaX", DoubleValue (5.0),
-                                 "DeltaY", DoubleValue (5.0),
-                                 "GridWidth", UintegerValue (3),
-                                 "LayoutType", StringValue ("RowFirst"));
-  mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel");
+  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+                                  "X",
+                                  StringValue("100.0"),
+                                  "Y",
+                                  StringValue("100.0"),
+                                  "Rho",
+                                  StringValue("ns3::UniformRandomVariable[Min=0|Max=30]"));
+  mobility.SetMobilityModel ("ns3::LevyFlight2dMobilityModel");
 
   mobility.Install (nodes);
 
@@ -61,7 +61,7 @@ int main (int argc, char *argv[])
 
 
   Simulator::Schedule (Seconds (1), &LogNodePositions, std::ref(nodes));  
-  Simulator::Stop (Seconds (10));
+  Simulator::Stop (Seconds (100));
   Simulator::Run ();
 
   Simulator::Destroy ();

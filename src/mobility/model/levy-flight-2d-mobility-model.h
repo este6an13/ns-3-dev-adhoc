@@ -34,6 +34,7 @@ public:
     static TypeId GetTypeId();
 
 private:
+    void Rebound(Time timeLeft);
     void DoWalk(Time delayLeft);
     void DoInitializePrivate();
     void DoDispose() override;
@@ -47,6 +48,7 @@ private:
     EventId m_event;
     double m_stepSize;
     double m_alpha;
+    Time m_modeTime;
     Ptr<RandomVariableStream> m_speed;
     Ptr<RandomVariableStream> m_direction;
     Rectangle m_bounds;

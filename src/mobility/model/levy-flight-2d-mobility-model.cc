@@ -43,14 +43,14 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
             .AddConstructor<LevyFlight2dMobilityModel>()
             .AddAttribute("Bounds",
                           "Bounds of the area to cruise.",
-                          RectangleValue(Rectangle(0.0, 10000.0, 0.0, 10000.0)),
+                          RectangleValue(Rectangle(-100, 100, -100, 100)),
                           MakeRectangleAccessor(&LevyFlight2dMobilityModel::m_bounds),
                           MakeRectangleChecker())
-            .AddAttribute("StepSize",
-                          "Step size of the Levy flight.",
-                          DoubleValue(1.0),
-                          MakeDoubleAccessor(&LevyFlight2dMobilityModel::m_stepSize),
-                          MakeDoubleChecker<double>())
+            .AddAttribute("Time",
+                          "Change current direction and speed after moving for this delay.",
+                          TimeValue(Seconds(1.0)),
+                          MakeTimeAccessor(&LevyFlight2dMobilityModel::m_modeTime),
+                          MakeTimeChecker())
             .AddAttribute("Alpha",
                           "Exponent parameter for the Levy flight distribution.",
                           DoubleValue(2.0),
@@ -93,18 +93,62 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     newPosition.x += std::cos(direction) * stepLength; // Corrected calculation
     newPosition.y += std::sin(direction) * stepLength;
 
-    std::cout << newPosition.x << " " << newPosition.y << "\n";
+    //std::cout << newPosition.x << " " << newPosition.y << "\n";
 
-    if (m_bounds.IsInside(newPosition))
+    Time delayLeft = m_modeTime;
+
+    DoWalk(delayLeft);
+}
+
+void
+LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
+{
+    Vector position = m_helper.GetCurrentPosition();
+    Vector speed = m_helper.GetVelocity();
+    Vector nextPosition = position;
+    nextPosition.x += speed.x * delayLeft.GetSeconds();
+    nextPosition.y += speed.y * delayLeft.GetSeconds();
+
+    std::cout << nextPosition.x << " " << nextPosition.y << "\n";
+
+    m_event.Cancel();
+    if (m_bounds.IsInside(nextPosition))
     {
-        m_helper.SetPosition(newPosition);
-        NotifyCourseChange();
+        m_event =
+            Simulator::Schedule(delayLeft, &LevyFlight2dMobilityModel::DoInitializePrivate, this);
     }
     else
     {
-        // If the new position is outside bounds, discard the step and generate a new one
-        DoInitializePrivate();
+        nextPosition = m_bounds.CalculateIntersection(position, speed);
+        Time delay = Seconds((nextPosition.x - position.x) / speed.x);
+        m_event = Simulator::Schedule(delay,
+                                      &LevyFlight2dMobilityModel::Rebound,
+                                      this,
+                                      delayLeft - delay);
     }
+    NotifyCourseChange();
+}
+
+void
+LevyFlight2dMobilityModel::Rebound(Time delayLeft)
+{
+    m_helper.UpdateWithBounds(m_bounds);
+    Vector position = m_helper.GetCurrentPosition();
+    Vector speed = m_helper.GetVelocity();
+    switch (m_bounds.GetClosestSide(position))
+    {
+    case Rectangle::RIGHT:
+    case Rectangle::LEFT:
+        speed.x = -speed.x;
+        break;
+    case Rectangle::TOP:
+    case Rectangle::BOTTOM:
+        speed.y = -speed.y;
+        break;
+    }
+    m_helper.SetVelocity(speed);
+    m_helper.Unpause();
+    DoWalk(delayLeft);
 }
 
 void LevyFlight2dMobilityModel::DoDispose()
