@@ -67,6 +67,8 @@ class Node : public Object
      */
     Node(uint32_t systemId);
 
+    Node(uint32_t threads, uint32_t ram);
+
     ~Node() override;
 
     /**
@@ -299,6 +301,8 @@ class Node : public Object
 
     uint32_t m_id;                                        //!< Node id for this node
     uint32_t m_sid;                                       //!< System id for this node
+    uint32_t m_threads;                                   
+    uint32_t m_ram;  
     std::vector<Ptr<NetDevice>> m_devices;                //!< Devices associated to this node
     std::vector<Ptr<Application>> m_applications;         //!< Applications associated to this node
     ProtocolHandlerList m_handlers;                       //!< Protocol handlers in the node

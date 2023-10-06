@@ -81,7 +81,17 @@ Node::GetTypeId()
                 TypeId::ATTR_GET | TypeId::ATTR_SET,
                 UintegerValue(0),
                 MakeUintegerAccessor(&Node::m_sid),
-                MakeUintegerChecker<uint32_t>());
+                MakeUintegerChecker<uint32_t>())
+            .AddAttribute("Threads",
+                      "The number of threads available in this Node.",
+                      UintegerValue(1), // Default to 1 thread
+                      MakeUintegerAccessor(&Node::m_threads),
+                      MakeUintegerChecker<uint32_t>())
+            .AddAttribute("RAM",
+                      "The amount of RAM in megabytes available in this Node.",
+                      UintegerValue(1024), // Default to 1024 MB (1 GB) of RAM
+                      MakeUintegerAccessor(&Node::m_ram),
+                      MakeUintegerChecker<uint32_t>());
     return tid;
 }
 
@@ -98,6 +108,16 @@ Node::Node(uint32_t sid)
       m_sid(sid)
 {
     NS_LOG_FUNCTION(this << sid);
+    Construct();
+}
+
+Node::Node(uint32_t threads, uint32_t ram)
+    : m_id(0),
+      m_sid(0),
+      m_threads(threads),
+      m_ram(ram)
+{
+    NS_LOG_FUNCTION(this << " Threads: " << threads << " RAM: " << ram);
     Construct();
 }
 
