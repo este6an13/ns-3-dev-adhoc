@@ -30,7 +30,7 @@ int main (int argc, char *argv[])
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_INFO);
 
   NodeContainer nodes;
-  nodes.Create (2); // Creating 10 nodes
+  nodes.Create (2, 2, 4); // Creating 10 nodes
 
   MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",

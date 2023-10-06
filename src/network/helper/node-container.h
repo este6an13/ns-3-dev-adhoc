@@ -232,6 +232,9 @@ class NodeContainer
      *
      * \param nc The NodeContainer to append.
      */
+
+    void Create(uint32_t n, uint32_t threads, uint32_t ram);
+
     void Add(const NodeContainer& nc);
 
     /**

@@ -99,6 +99,15 @@ NodeContainer::Create(uint32_t n, uint32_t systemId)
 }
 
 void
+NodeContainer::Create(uint32_t n, uint32_t threads, uint32_t ram)
+{
+    for (uint32_t i = 0; i < n; i++)
+    {
+        m_nodes.push_back(CreateObject<Node>(threads, ram));
+    }
+}
+
+void
 NodeContainer::Add(const NodeContainer& nc)
 {
     for (Iterator i = nc.Begin(); i != nc.End(); i++)
