@@ -8,6 +8,37 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
 
+struct Task {
+  uint32_t threads;
+  uint32_t ram;
+  uint32_t time;
+
+  Task(uint32_t threads, uint32_t ram, uint32_t time) : threads(threads), ram(ram), time(time) {}
+};
+
+void InitializeTaskQueue(std::queue<Task> &taskQueue) {
+  Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
+  Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
+  Ptr<UniformRandomVariable> r_time = CreateObject<UniformRandomVariable> ();
+  for (int i = 0; i < 100; i++) {
+    uint32_t threads = r_threads->GetInteger (4, 64);
+    uint32_t ram = r_ram->GetInteger (12, 64);
+    uint32_t time = r_time->GetInteger (1, 10);
+    taskQueue.push(Task(threads, ram, time));
+  }
+}
+
+void PublishTask(std::queue<Task> &taskQueue) {
+  if (!taskQueue.empty()) {
+    Task task = taskQueue.front();
+    NS_LOG_INFO("Published Task: Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time);
+    taskQueue.pop();
+  }
+
+  // Schedule the next task processing event
+  Simulator::Schedule(Seconds(1), &PublishTask, std::ref(taskQueue));
+}
+
 void LogNodePositions_L1 (NodeContainer& nodes)
 {
   for (uint32_t i = 0; i < nodes.GetN (); ++i)
@@ -42,6 +73,10 @@ int main (int argc, char *argv[])
   Time::SetResolution (Time::NS);
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_INFO);
 
+  std::queue<Task> taskQueue;
+
+  InitializeTaskQueue(taskQueue);
+
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
@@ -73,6 +108,7 @@ int main (int argc, char *argv[])
 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
+  Simulator::Schedule(Seconds(1), &PublishTask, std::ref(taskQueue));
   Simulator::Stop (Seconds (100));
   Simulator::Run ();
 
