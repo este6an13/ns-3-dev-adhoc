@@ -41,11 +41,6 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
             .SetParent<MobilityModel>()
             .SetGroupName("Mobility")
             .AddConstructor<LevyFlight2dMobilityModel>()
-            .AddAttribute("Bounds",
-                          "Bounds of the area to cruise.",
-                          RectangleValue(Rectangle(-100, 100, -100, 100)),
-                          MakeRectangleAccessor(&LevyFlight2dMobilityModel::m_bounds),
-                          MakeRectangleChecker())
             .AddAttribute("Time",
                           "Change current direction and speed after moving for this delay.",
                           TimeValue(Seconds(1.0)),
@@ -90,10 +85,8 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     // Levy flight implementation
     double stepLength = m_stepSize * std::pow(m_direction->GetValue(), -1.0 / m_alpha);
     Vector newPosition = position;
-    newPosition.x += std::cos(direction) * stepLength; // Corrected calculation
+    newPosition.x += std::cos(direction) * stepLength;
     newPosition.y += std::sin(direction) * stepLength;
-
-    //std::cout << newPosition.x << " " << newPosition.y << "\n";
 
     Time delayLeft = m_modeTime;
 
@@ -112,20 +105,8 @@ LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
     std::cout << nextPosition.x << " " << nextPosition.y << "\n";
 
     m_event.Cancel();
-    if (m_bounds.IsInside(nextPosition))
-    {
-        m_event =
+            m_event =
             Simulator::Schedule(delayLeft, &LevyFlight2dMobilityModel::DoInitializePrivate, this);
-    }
-    else
-    {
-        nextPosition = m_bounds.CalculateIntersection(position, speed);
-        Time delay = Seconds((nextPosition.x - position.x) / speed.x);
-        m_event = Simulator::Schedule(delay,
-                                      &LevyFlight2dMobilityModel::Rebound,
-                                      this,
-                                      delayLeft - delay);
-    }
     NotifyCourseChange();
 }
 
@@ -159,13 +140,11 @@ void LevyFlight2dMobilityModel::DoDispose()
 
 Vector LevyFlight2dMobilityModel::DoGetPosition() const
 {
-    m_helper.UpdateWithBounds(m_bounds);
     return m_helper.GetCurrentPosition();
 }
 
 void LevyFlight2dMobilityModel::DoSetPosition(const Vector &position)
 {
-    NS_ASSERT(m_bounds.IsInside(position));
     m_helper.SetPosition(position);
     m_event.Cancel();
     m_event = Simulator::ScheduleNow(&LevyFlight2dMobilityModel::DoInitializePrivate, this);

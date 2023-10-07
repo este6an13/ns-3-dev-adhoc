@@ -30,7 +30,13 @@ int main (int argc, char *argv[])
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_INFO);
 
   NodeContainer nodes;
-  nodes.Create (2, 2, 4); // Creating 10 nodes
+  Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
+  Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
+  for (int i = 0; i < 100; i++) {
+    uint32_t threads = r_threads->GetInteger (1, 16);
+    uint32_t ram = r_ram->GetInteger (4, 16);
+    nodes.Create (1, threads, ram);
+  }
 
   MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
@@ -40,25 +46,10 @@ int main (int argc, char *argv[])
                                   StringValue("100.0"),
                                   "Rho",
                                   StringValue("ns3::UniformRandomVariable[Min=0|Max=30]"));
+
   mobility.SetMobilityModel ("ns3::LevyFlight2dMobilityModel");
 
   mobility.Install (nodes);
-
-  InternetStackHelper internet;
-  internet.Install (nodes);
-
-  PointToPointHelper p2p;
-  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
-
-  NetDeviceContainer devices;
-  devices = p2p.Install (nodes.Get (0), nodes.Get (1));
-
-  Ipv4AddressHelper address;
-  address.SetBase ("10.1.1.0", "255.255.255.0");
-
-  Ipv4InterfaceContainer interfaces = address.Assign (devices);
-
 
   Simulator::Schedule (Seconds (1), &LogNodePositions, std::ref(nodes));  
   Simulator::Stop (Seconds (100));
