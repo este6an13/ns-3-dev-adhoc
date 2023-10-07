@@ -8,17 +8,30 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
 
-void LogNodePositions (NodeContainer& nodes)
+void LogNodePositions_L1 (NodeContainer& nodes)
 {
   for (uint32_t i = 0; i < nodes.GetN (); ++i)
   {
     Ptr<MobilityModel> mobility = nodes.Get (i)->GetObject<MobilityModel> ();
     Vector position = mobility->GetPosition ();
-    NS_LOG_INFO ("Node " << i << " Position: " << position);
+    NS_LOG_INFO ("Node L1 " << i << " Position: " << position);
   }
 
   // Schedule the next logging event
-  Simulator::Schedule (Seconds (1), &LogNodePositions, nodes);
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L1, nodes);
+}
+
+void LogNodePositions_L2 (NodeContainer& nodes)
+{
+  for (uint32_t i = 0; i < nodes.GetN (); ++i)
+  {
+    Ptr<MobilityModel> mobility = nodes.Get (i)->GetObject<MobilityModel> ();
+    Vector position = mobility->GetPosition ();
+    NS_LOG_INFO ("Node L2 " << i << " Position: " << position);
+  }
+
+  // Schedule the next logging event
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L2, nodes);
 }
 
 int main (int argc, char *argv[])
@@ -29,13 +42,19 @@ int main (int argc, char *argv[])
   Time::SetResolution (Time::NS);
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_INFO);
 
-  NodeContainer nodes;
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
-  for (int i = 0; i < 100; i++) {
+
+  NodeContainer L1_nodes;
+  for (int i = 0; i < 4; i++) {
     uint32_t threads = r_threads->GetInteger (1, 16);
     uint32_t ram = r_ram->GetInteger (4, 16);
-    nodes.Create (1, threads, ram);
+    L1_nodes.Create (1, threads, ram);
+  }
+
+  NodeContainer L2_nodes;
+  for (int i = 0; i < 2; i++) {
+    L2_nodes.Create (1);
   }
 
   MobilityHelper mobility;
@@ -49,9 +68,11 @@ int main (int argc, char *argv[])
 
   mobility.SetMobilityModel ("ns3::LevyFlight2dMobilityModel");
 
-  mobility.Install (nodes);
+  mobility.Install (L1_nodes);
+  mobility.Install (L2_nodes);
 
-  Simulator::Schedule (Seconds (1), &LogNodePositions, std::ref(nodes));  
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
   Simulator::Stop (Seconds (100));
   Simulator::Run ();
 

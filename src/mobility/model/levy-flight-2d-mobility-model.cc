@@ -102,8 +102,6 @@ LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
     nextPosition.x += speed.x * delayLeft.GetSeconds();
     nextPosition.y += speed.y * delayLeft.GetSeconds();
 
-    std::cout << nextPosition.x << " " << nextPosition.y << "\n";
-
     m_event.Cancel();
             m_event =
             Simulator::Schedule(delayLeft, &LevyFlight2dMobilityModel::DoInitializePrivate, this);
