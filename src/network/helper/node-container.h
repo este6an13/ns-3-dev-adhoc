@@ -235,6 +235,8 @@ class NodeContainer
 
     void Create(uint32_t n, uint32_t threads, uint32_t ram);
 
+    void Create(uint32_t n, uint32_t threads, uint32_t ram, std::queue<Task> tasks);
+
     void Add(const NodeContainer& nc);
 
     /**

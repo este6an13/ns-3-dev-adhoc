@@ -108,6 +108,15 @@ NodeContainer::Create(uint32_t n, uint32_t threads, uint32_t ram)
 }
 
 void
+NodeContainer::Create(uint32_t n, uint32_t threads, uint32_t ram, std::queue<Task> tasks)
+{
+    for (uint32_t i = 0; i < n; i++)
+    {
+        m_nodes.push_back(CreateObject<Node>(threads, ram, tasks));
+    }
+}
+
+void
 NodeContainer::Add(const NodeContainer& nc)
 {
     for (Iterator i = nc.Begin(); i != nc.End(); i++)

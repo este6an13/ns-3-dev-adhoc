@@ -8,24 +8,20 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
 
-struct Task {
-  uint32_t threads;
-  uint32_t ram;
-  uint32_t time;
-
-  Task(uint32_t threads, uint32_t ram, uint32_t time) : threads(threads), ram(ram), time(time) {}
-};
-
-void InitializeTaskQueue(std::queue<Task> &taskQueue) {
+std::queue<Task> GenerateTaskQueue() {
+  std::queue<Task> taskQueue;
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_time = CreateObject<UniformRandomVariable> ();
-  for (int i = 0; i < 100; i++) {
+  Ptr<UniformRandomVariable> r_tasks = CreateObject<UniformRandomVariable> ();
+  int n_tasks = r_tasks->GetInteger (5, 10);
+  for (int i = 0; i < n_tasks; i++) {
     uint32_t threads = r_threads->GetInteger (4, 64);
     uint32_t ram = r_ram->GetInteger (12, 64);
     uint32_t time = r_time->GetInteger (1, 10);
     taskQueue.push(Task(threads, ram, time));
   }
+  return taskQueue;
 }
 
 void PublishTask(std::queue<Task> &taskQueue) {
@@ -73,9 +69,7 @@ int main (int argc, char *argv[])
   Time::SetResolution (Time::NS);
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_INFO);
 
-  std::queue<Task> taskQueue;
-
-  InitializeTaskQueue(taskQueue);
+  std::queue<Task> taskQueue = GenerateTaskQueue();
 
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
@@ -89,7 +83,10 @@ int main (int argc, char *argv[])
 
   NodeContainer L2_nodes;
   for (int i = 0; i < 2; i++) {
-    L2_nodes.Create (1);
+    uint32_t threads = r_threads->GetInteger (1, 16);
+    uint32_t ram = r_ram->GetInteger (4, 16);
+    std::queue<Task> queue = GenerateTaskQueue();
+    L2_nodes.Create (1, threads, ram, queue);
   }
 
   MobilityHelper mobility;

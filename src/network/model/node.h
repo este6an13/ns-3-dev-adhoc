@@ -26,6 +26,7 @@
 #include "ns3/ptr.h"
 
 #include <vector>
+#include <queue>
 
 namespace ns3
 {
@@ -34,6 +35,14 @@ class Application;
 class Packet;
 class Address;
 class Time;
+
+struct Task {
+  uint32_t threads;
+  uint32_t ram;
+  uint32_t time;
+
+  Task(uint32_t threads, uint32_t ram, uint32_t time) : threads(threads), ram(ram), time(time) {}
+};
 
 /**
  * \ingroup network
@@ -68,6 +77,8 @@ class Node : public Object
     Node(uint32_t systemId);
 
     Node(uint32_t threads, uint32_t ram);
+
+    Node(uint32_t threads, uint32_t ram, std::queue<Task> tasks);
 
     ~Node() override;
 
@@ -303,6 +314,7 @@ class Node : public Object
     uint32_t m_sid;                                       //!< System id for this node
     uint32_t m_threads;                                   
     uint32_t m_ram;  
+    std::queue<Task> m_tasks; 
     std::vector<Ptr<NetDevice>> m_devices;                //!< Devices associated to this node
     std::vector<Ptr<Application>> m_applications;         //!< Applications associated to this node
     ProtocolHandlerList m_handlers;                       //!< Protocol handlers in the node

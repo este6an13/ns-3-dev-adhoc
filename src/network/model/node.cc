@@ -121,6 +121,17 @@ Node::Node(uint32_t threads, uint32_t ram)
     Construct();
 }
 
+Node::Node(uint32_t threads, uint32_t ram, std::queue<Task> tasks)
+    : m_id(0),
+      m_sid(0),
+      m_threads(threads),
+      m_ram(ram),
+      m_tasks(tasks)
+{
+    NS_LOG_FUNCTION(this << " Threads: " << threads << " RAM: " << ram);
+    Construct();
+}
+
 void
 Node::Construct()
 {
