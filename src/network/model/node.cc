@@ -166,6 +166,34 @@ Node::GetSystemId() const
 }
 
 uint32_t
+Node::GetThreads() const
+{
+    NS_LOG_FUNCTION(this);
+    return m_threads;
+}
+
+uint32_t
+Node::GetRAM() const
+{
+    NS_LOG_FUNCTION(this);
+    return m_ram;
+}
+
+std::queue<Task>
+Node::GetTasks() const
+{
+    NS_LOG_FUNCTION(this);
+    return m_tasks;
+}
+
+void
+Node::SetTasks(std::queue<Task> tasks)
+{
+    NS_LOG_FUNCTION(this);
+    m_tasks = tasks;
+}
+
+uint32_t
 Node::AddDevice(Ptr<NetDevice> device)
 {
     NS_LOG_FUNCTION(this << device);

@@ -24,15 +24,17 @@ std::queue<Task> GenerateTaskQueue() {
   return taskQueue;
 }
 
-void PublishTask(std::queue<Task> &taskQueue) {
-  if (!taskQueue.empty()) {
-    Task task = taskQueue.front();
-    NS_LOG_INFO("Published Task: Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time);
-    taskQueue.pop();
+void PublishTask(Ptr<Node> node) {
+  std::queue<Task> tqueue = node->GetTasks();
+  if (!tqueue.empty()) {
+    Task task = tqueue.front();
+    NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
+    tqueue.pop();
+    node->SetTasks(tqueue);
   }
 
   // Schedule the next task processing event
-  Simulator::Schedule(Seconds(1), &PublishTask, std::ref(taskQueue));
+  Simulator::Schedule(Seconds(1), &PublishTask, node);
 }
 
 void LogNodePositions_L1 (NodeContainer& nodes)
@@ -87,6 +89,7 @@ int main (int argc, char *argv[])
     uint32_t ram = r_ram->GetInteger (4, 16);
     std::queue<Task> queue = GenerateTaskQueue();
     L2_nodes.Create (1, threads, ram, queue);
+    Simulator::Schedule(Seconds(1), &PublishTask, L2_nodes.Get (i));
   }
 
   MobilityHelper mobility;
@@ -105,7 +108,7 @@ int main (int argc, char *argv[])
 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
-  Simulator::Schedule(Seconds(1), &PublishTask, std::ref(taskQueue));
+  //Simulator::Schedule(Seconds(1), &PublishTask, std::ref(taskQueue));
   Simulator::Stop (Seconds (100));
   Simulator::Run ();
 

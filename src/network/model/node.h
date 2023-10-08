@@ -106,6 +106,14 @@ class Node : public Object
      */
     uint32_t GetSystemId() const;
 
+    uint32_t GetThreads() const;
+
+    uint32_t GetRAM() const;
+
+    std::queue<Task> GetTasks() const;
+
+    void SetTasks(std::queue<Task> tasks);
+
     /**
      * \brief Associate a NetDevice to this node.
      *
