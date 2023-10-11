@@ -411,11 +411,25 @@ TrafficControlLayer::Send(Ptr<NetDevice> device, Ptr<QueueDiscItem> item)
         // Enqueue the packet in the queue disc associated with the netdevice queue
         // selected for the packet and try to dequeue packets from such queue disc
         item->SetTxQueueIndex(txq);
+        // Check if ndi is null before using it
+        if (ndi != m_netDevices.end()) {
+            if (txq < ndi->second.m_queueDiscsToWake.size()) {
+                Ptr<QueueDisc> qDisc = ndi->second.m_queueDiscsToWake[txq];             
+                if (qDisc) {
+                    NS_LOG_DEBUG("qDisc OK");
+                    qDisc->Enqueue(item);
+                    qDisc->Run();
+                } else {
+                    NS_LOG_DEBUG("qDisc is NULL");
+                }
+            } else {
+                NS_LOG_DEBUG("txq value: " << txq << " qdiscstowake: " << ndi->second.m_queueDiscsToWake.size());
+                // Why? What to do here then?
+            }
+        } else {
+            NS_LOG_DEBUG("ndi is NULL");
+        }
 
-        Ptr<QueueDisc> qDisc = ndi->second.m_queueDiscsToWake[txq];
-        NS_ASSERT(qDisc);
-        qDisc->Enqueue(item);
-        qDisc->Run();
     }
 }
 
