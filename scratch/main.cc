@@ -119,6 +119,20 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
   NetDeviceContainer centerDevices = wifi.Install(wifiPhy, wifiMac, centerNode);
   NetDeviceContainer otherDevices = wifi.Install(wifiPhy, wifiMac, otherNodes);
 
+
+  PointToPointHelper p2p;
+  // Create a P2P link between each otherNode and the centerNode
+  for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
+    p2p.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    p2p.SetDeviceAttribute("Mtu", UintegerValue(1400));
+    p2p.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
+
+    NetDeviceContainer link = p2p.Install(otherNodes.Get(i), centerNode.Get (0));
+
+  }
+
+  p2p.EnablePcapAll ("p2p");
+
   // Set up the Internet stack on all nodes
   InternetStackHelper internet;
   internet.Install(centerNode);
@@ -140,8 +154,8 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
   for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
     Address serverAddress(InetSocketAddress(otherInterfaces.GetAddress(i, 0), serverPort));
 
-    wifiPhy.EnablePcap("pcap/center-" + std::to_string(node->GetId()), centerDevices.Get(0), true);
-    wifiPhy.EnablePcap("pcap/others-" + std::to_string(i), otherDevices.Get(i), true);
+    //wifiPhy.EnablePcap("pcap/center-" + std::to_string(node->GetId()), centerDevices.Get(0), true);
+    //wifiPhy.EnablePcap("pcap/others-" + std::to_string(i), otherDevices.Get(i), true);
 
     // Create a UDP server to receive data
     PacketSinkHelper packetSinkHelper("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), serverPort));
