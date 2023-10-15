@@ -143,8 +143,8 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
     // Create a UDP server to receive data
     PacketSinkHelper packetSinkHelper("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), serverPort));
     ApplicationContainer serverApps = packetSinkHelper.Install(otherNodes.Get(i));
-    serverApps.Start(Seconds(0.0));
-    serverApps.Stop(Seconds(200.0)); // Adjust the stop time as needed
+    serverApps.Start(Seconds(1.0));
+    serverApps.Stop(Seconds(5.0)); // Adjust the stop time as needed
 
     // Create a UDP client on the centerNode to send data
     Address clientAddress(InetSocketAddress(otherInterfaces.GetAddress(i, 0), serverPort));
@@ -152,15 +152,15 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
     onoff.SetAttribute("PacketSize", UintegerValue(1024)); // Adjust packet size as needed
     onoff.SetAttribute("Remote", AddressValue(serverAddress)); // Set the server address
     ApplicationContainer clientApps = onoff.Install(node);
-    clientApps.Start(Seconds(20.0));
-    clientApps.Stop(Seconds(50.0));
+    clientApps.Start(Seconds(0.0));
+    clientApps.Stop(Seconds(10.0));
 
     wifiPhy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-    wifiPhy.EnablePcap("main", centerDevices.Get(0));
-    wifiPhy.EnablePcap("main", otherDevices.Get(i));
+    wifiPhy.EnablePcap("main", centerDevices.Get(0), true);
+    wifiPhy.EnablePcap("main", otherDevices.Get(i), true);
 
     // Wait for some time before sending the data
-    Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
+    //Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
   }
 }
 
