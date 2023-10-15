@@ -144,16 +144,16 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
     PacketSinkHelper packetSinkHelper("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), serverPort));
     ApplicationContainer serverApps = packetSinkHelper.Install(otherNodes.Get(i));
     serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(5.0)); // Adjust the stop time as needed
+    serverApps.Stop(Seconds(10.0)); // Adjust the stop time as needed
 
     // Create a UDP client on the centerNode to send data
-    Address clientAddress(InetSocketAddress(otherInterfaces.GetAddress(i, 0), serverPort));
+    Address clientAddress(InetSocketAddress(centerInterface.GetAddress(0), serverPort));
     OnOffHelper onoff("ns3::UdpSocketFactory", clientAddress);
     onoff.SetAttribute("PacketSize", UintegerValue(1024)); // Adjust packet size as needed
-    onoff.SetAttribute("Remote", AddressValue(serverAddress)); // Set the server address
+    //onoff.SetAttribute("Remote", AddressValue(serverAddress)); // Set the server address
     ApplicationContainer clientApps = onoff.Install(node);
-    clientApps.Start(Seconds(0.0));
-    clientApps.Stop(Seconds(10.0));
+    //clientApps.Start(Seconds(1.0));
+    //clientApps.Stop(Seconds(5.0));
 
     wifiPhy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
 
