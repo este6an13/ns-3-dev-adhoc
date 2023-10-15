@@ -160,8 +160,9 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
     clientApps.Stop(Seconds(10.0));
 
     wifiPhy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-    wifiPhy.EnablePcap("scratch/pcap/center-" + std::to_string(node->GetId()), centerDevices.Get(0), true);
-    wifiPhy.EnablePcap("scratch/pcap/others-" + std::to_string(i), otherDevices.Get(i), true);
+
+    wifiPhy.EnablePcap("pcap/center-" + std::to_string(node->GetId()), centerDevices.Get(0), true);
+    wifiPhy.EnablePcap("pcap/others-" + std::to_string(i), otherDevices.Get(i), true);
 
     // Wait for some time before sending the data
     //Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
