@@ -145,6 +145,8 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
     ApplicationContainer serverApps = packetSinkHelper.Install(otherNodes.Get(i));
     serverApps.Start(Seconds(1.0));
     serverApps.Stop(Seconds(5.0)); // Adjust the stop time as needed
+    serverApps.Start(Seconds(1.0));
+    serverApps.Stop(Seconds(5.0)); // Adjust the stop time as needed
 
     // Create a UDP client on the centerNode to send data
     Address clientAddress(InetSocketAddress(otherInterfaces.GetAddress(i, 0), serverPort));
@@ -154,12 +156,15 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
     ApplicationContainer clientApps = onoff.Install(node);
     clientApps.Start(Seconds(0.0));
     clientApps.Stop(Seconds(10.0));
+    clientApps.Start(Seconds(0.0));
+    clientApps.Stop(Seconds(10.0));
 
     wifiPhy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
     wifiPhy.EnablePcap("scratch/pcap/center-" + std::to_string(node->GetId()), centerDevices.Get(0), true);
     wifiPhy.EnablePcap("scratch/pcap/others-" + std::to_string(i), otherDevices.Get(i), true);
 
     // Wait for some time before sending the data
+    //Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
     //Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
   }
 }
