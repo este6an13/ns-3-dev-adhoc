@@ -46,40 +46,42 @@ uint16_t GeneratePort(Ptr<Node> node) {
 }
 
 void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
+
+  PointToPointHelper p2p;
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
+  NetDeviceContainer devices[otherNodes.GetN()];
+
+  for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
+    devices[i] = p2p.Install (NodeContainer (node, otherNodes.Get (i)));
+  }
+
+  // Install internet stack
+  InternetStackHelper stack;
+  stack.Install (NodeContainer (node));
+  stack.Install (otherNodes);
+  
+  // Assign IP addresses
+  Ipv4AddressHelper address;
+  std::string ipAddress = GenerateIPAddress(node);
+  std::string subnetMask = "255.255.255.0";
+  std::cout << ipAddress << "\n";
+  std::cout << subnetMask << "\n";
+  address.SetBase (ipAddress.c_str(), subnetMask.c_str());
+
+  uint16_t serverPort = GeneratePort(node);
+  
   for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
 
-    NodeContainer nodes;
-    nodes.Add(node);
-    nodes.Add(otherNodes.Get (i))
-
-    // Create p2p link
-    PointToPointHelper p2p;
-    p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-    p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
-
-    NetDeviceContainer devices;
-    devices = p2p.Install (nodes);
-
-    // Install internet stack
-    InternetStackHelper stack;
-    stack.Install (nodes);
-
-    // Assign IP addresses
-    Ipv4AddressHelper address;
-    std::string ipAddress = GenerateIPAddress(node);
-    std::string subnetMask = "255.255.255.0";
-    std::cout << ipAddress << "\n";
-    std::cout << subnetMask << "\n";
-    address.SetBase (ipAddress.c_str(), subnetMask.c_str());
-    Ipv4InterfaceContainer interfaces = address.Assign (devices);
-
-    // Enable pcap tracing
-    p2p.EnablePcap (std::to_string(node->GetId()));
+    Ipv4InterfaceContainer interfaces = address.Assign (devices[i]);
+    address.NewNetwork ();
+  
+    p2p.EnablePcap ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(i), devices[i], false);
 
     // Create a simple UDP application
-    uint16_t serverPort = 9;
     UdpServerHelper server (serverPort);
-    ApplicationContainer serverApps = server.Install (nodes.Get (1));
+    ApplicationContainer serverApps = server.Install (otherNodes.Get (i));
     serverApps.Start (Seconds (1.0));
     serverApps.Stop (Seconds (10.0));
 
@@ -88,12 +90,11 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
     client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
     client.SetAttribute ("PacketSize", UintegerValue (1024));
 
-    ApplicationContainer clientApps = client.Install (nodes.Get (0));
+    ApplicationContainer clientApps = client.Install (node);
     clientApps.Start (Seconds (2.0));
     clientApps.Stop (Seconds (10.0));
   }
 }
-
 
 std::queue<Task> GenerateTaskQueue() {
   std::queue<Task> taskQueue;
@@ -163,9 +164,6 @@ int main (int argc, char *argv[])
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_ALL);
-  //LogComponentEnable("TrafficControlLayer", LOG_LEVEL_ALL);
-  //LogComponentEnable("PacketSink", LOG_LEVEL_ALL);
-  LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
 
   std::queue<Task> taskQueue = GenerateTaskQueue();
 
@@ -202,8 +200,8 @@ int main (int argc, char *argv[])
   mobility.Install (L1_nodes);
   mobility.Install (L2_nodes);
 
-  //Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
-  //Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
   Simulator::Stop (Seconds (500));
   Simulator::Run ();
 
