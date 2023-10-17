@@ -65,11 +65,11 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
 
   // Assign IP addresses
   Ipv4AddressHelper address;
-  address.SetBase ("10.1.1.0", "255.255.255.0");
+  address.SetBase (GenerateIPAddress(node).c_str(), "255.255.255.0");
   Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
   // Enable pcap tracing
-  p2p.EnablePcapAll ("simple-p2p");
+  p2p.EnablePcapAll ("p2p");
 
   // Create a simple UDP application
   uint16_t serverPort = 9;
