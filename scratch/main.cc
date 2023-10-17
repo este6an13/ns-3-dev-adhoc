@@ -47,74 +47,48 @@ uint16_t GeneratePort(Ptr<Node> node) {
 
 void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
 
-  WifiHelper wifi;
-  wifi.SetStandard(WIFI_STANDARD_80211b);
+  NodeContainer nodes;
+  nodes.Create (2);
 
-  YansWifiPhyHelper wifiPhy;
-  YansWifiChannelHelper wifiChannel;
-  wifiChannel.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss("ns3::FriisPropagationLossModel");
-  wifiPhy.SetChannel(wifiChannel.Create());
+  // Create p2p link
+  PointToPointHelper p2p;
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
 
-  // Add a mac and disable rate control
-  WifiMacHelper wifiMac;
+  NetDeviceContainer devices;
+  devices = p2p.Install (nodes);
 
-  wifiPhy.Set("TxPowerStart", DoubleValue(7.5));
-  wifiPhy.Set("TxPowerEnd", DoubleValue(7.5));
+  // Install internet stack
+  InternetStackHelper stack;
+  stack.Install (nodes);
 
-  NodeContainer centerNode;
-  centerNode.Add(node);
-
-  // Install Wi-Fi on nodes
-  wifiMac.SetType("ns3::AdhocWifiMac");
-  NetDeviceContainer centerDevices = wifi.Install(wifiPhy, wifiMac, centerNode);
-  NetDeviceContainer otherDevices = wifi.Install(wifiPhy, wifiMac, otherNodes);
-
-  // Set up the Internet stack on all nodes
-  InternetStackHelper internet;
-  internet.Install(centerNode);
-  internet.Install(otherNodes);
-
-  // Assign IP addresses to devices
-  Ipv4AddressHelper ipv4;
+  // Assign IP addresses
+  Ipv4AddressHelper address;
   std::string ipAddress = GenerateIPAddress(node);
   std::string subnetMask = "255.255.255.0";
   std::cout << ipAddress << "\n";
   std::cout << subnetMask << "\n";
+  address.SetBase (ipAddress.c_str(), subnetMask.c_str());
+  Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
-  ipv4.SetBase(ipAddress.c_str(), subnetMask.c_str());
-  Ipv4InterfaceContainer centerInterface = ipv4.Assign(centerDevices);
-  Ipv4InterfaceContainer otherInterfaces = ipv4.Assign(otherDevices);
+  // Enable pcap tracing
+  p2p.EnablePcapAll ("pcap/p2p");
 
-  uint16_t serverPort = GeneratePort(node);
+  // Create a simple UDP application
+  uint16_t serverPort = 9;
+  UdpServerHelper server (serverPort);
+  ApplicationContainer serverApps = server.Install (nodes.Get (1));
+  serverApps.Start (Seconds (1.0));
+  serverApps.Stop (Seconds (10.0));
 
-  // Create a P2P link between each otherNode and the centerNode
-  for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
-    PointToPointHelper p2p;
-    p2p.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
-    p2p.SetDeviceAttribute("Mtu", UintegerValue(1400));
-    p2p.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
-    p2p.EnablePcapAll("p2p");
+  UdpClientHelper client (interfaces.GetAddress (1), serverPort);
+  client.SetAttribute ("MaxPackets", UintegerValue (1));
+  client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+  client.SetAttribute ("PacketSize", UintegerValue (1024));
 
-    NetDeviceContainer link = p2p.Install(otherNodes.Get(i), centerNode.Get(0));
-
-    Address serverAddress(InetSocketAddress(otherInterfaces.GetAddress(i, 0), serverPort));
-
-    // Create a simple UDP application
-    UdpServerHelper server(serverPort);
-    ApplicationContainer serverApps = server.Install(otherNodes.Get(i));
-    serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(10.0));
-
-    UdpClientHelper client(serverAddress, serverPort);
-    client.SetAttribute("MaxPackets", UintegerValue(1));
-    client.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-    client.SetAttribute("PacketSize", UintegerValue(1024));
-
-    ApplicationContainer clientApps = client.Install(centerNode.Get(0));
-    clientApps.Start(Seconds(2.0));
-    clientApps.Stop(Seconds(10.0));
-  }
+  ApplicationContainer clientApps = client.Install (nodes.Get (0));
+  clientApps.Start (Seconds (2.0));
+  clientApps.Stop (Seconds (10.0));
 }
 
 
