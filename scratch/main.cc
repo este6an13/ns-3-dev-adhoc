@@ -77,7 +77,7 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
     Ipv4InterfaceContainer interfaces = address.Assign (devices[i]);
     address.NewNetwork ();
   
-    p2p.EnablePcap ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(i), devices[i], false);
+    p2p.EnablePcap ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(i), devices[i], true);
 
     // Create a simple UDP application
     UdpServerHelper server (serverPort);
