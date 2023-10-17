@@ -45,50 +45,53 @@ uint16_t GeneratePort(Ptr<Node> node) {
     return z;
 }
 
-void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
+void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
+  for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
 
-  NodeContainer nodes;
-  nodes.Create (2);
+    NodeContainer nodes;
+    nodes.Add(node);
+    nodes.Add(otherNodes.Get (i))
 
-  // Create p2p link
-  PointToPointHelper p2p;
-  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+    // Create p2p link
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+    p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
 
-  NetDeviceContainer devices;
-  devices = p2p.Install (nodes);
+    NetDeviceContainer devices;
+    devices = p2p.Install (nodes);
 
-  // Install internet stack
-  InternetStackHelper stack;
-  stack.Install (nodes);
+    // Install internet stack
+    InternetStackHelper stack;
+    stack.Install (nodes);
 
-  // Assign IP addresses
-  Ipv4AddressHelper address;
-  std::string ipAddress = GenerateIPAddress(node);
-  std::string subnetMask = "255.255.255.0";
-  std::cout << ipAddress << "\n";
-  std::cout << subnetMask << "\n";
-  address.SetBase (ipAddress.c_str(), subnetMask.c_str());
-  Ipv4InterfaceContainer interfaces = address.Assign (devices);
+    // Assign IP addresses
+    Ipv4AddressHelper address;
+    std::string ipAddress = GenerateIPAddress(node);
+    std::string subnetMask = "255.255.255.0";
+    std::cout << ipAddress << "\n";
+    std::cout << subnetMask << "\n";
+    address.SetBase (ipAddress.c_str(), subnetMask.c_str());
+    Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
-  // Enable pcap tracing
-  p2p.EnablePcapAll ("pcap/p2p");
+    // Enable pcap tracing
+    p2p.EnablePcap (std::to_string(node->GetId()));
 
-  // Create a simple UDP application
-  uint16_t serverPort = 9;
-  UdpServerHelper server (serverPort);
-  ApplicationContainer serverApps = server.Install (nodes.Get (1));
-  serverApps.Start (Seconds (1.0));
-  serverApps.Stop (Seconds (10.0));
+    // Create a simple UDP application
+    uint16_t serverPort = 9;
+    UdpServerHelper server (serverPort);
+    ApplicationContainer serverApps = server.Install (nodes.Get (1));
+    serverApps.Start (Seconds (1.0));
+    serverApps.Stop (Seconds (10.0));
 
-  UdpClientHelper client (interfaces.GetAddress (1), serverPort);
-  client.SetAttribute ("MaxPackets", UintegerValue (1));
-  client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
-  client.SetAttribute ("PacketSize", UintegerValue (1024));
+    UdpClientHelper client (interfaces.GetAddress (1), serverPort);
+    client.SetAttribute ("MaxPackets", UintegerValue (1));
+    client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+    client.SetAttribute ("PacketSize", UintegerValue (1024));
 
-  ApplicationContainer clientApps = client.Install (nodes.Get (0));
-  clientApps.Start (Seconds (2.0));
-  clientApps.Stop (Seconds (10.0));
+    ApplicationContainer clientApps = client.Install (nodes.Get (0));
+    clientApps.Start (Seconds (2.0));
+    clientApps.Stop (Seconds (10.0));
+  }
 }
 
 
@@ -113,7 +116,7 @@ void PublishTask(Ptr<Node> node, NodeContainer& L1_nodes) {
   if (!tqueue.empty()) {
     Task task = tqueue.front();
 
-    CreateNetwork(node, L1_nodes, task);
+    CreateNetwork(node, L1_nodes);
 
     NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
     
