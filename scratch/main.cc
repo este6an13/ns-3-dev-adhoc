@@ -51,6 +51,8 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
   p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
 
+  p2p.EnablePcapAll ("p2p");
+
   NetDeviceContainer devices[otherNodes.GetN()];
 
   for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
@@ -76,9 +78,7 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
 
     Ipv4InterfaceContainer interfaces = address.Assign (devices[i]);
     address.NewNetwork ();
-  
-    p2p.EnablePcapAll ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(i));
-
+    
     // Create a simple UDP application
     UdpServerHelper server (serverPort);
     ApplicationContainer serverApps = server.Install (otherNodes.Get (i));
