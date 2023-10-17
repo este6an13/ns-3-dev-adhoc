@@ -17,23 +17,6 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
 
-// Serialization function
-void SerializeTask(const Task& task, Buffer& buffer) {
-    buffer.AddAtEnd(3 * sizeof(uint32_t));
-    Buffer::Iterator iter = buffer.Begin();
-    iter.WriteU32(task.threads);
-    iter.WriteU32(task.ram);
-    iter.WriteU32(task.time);
-}
-
-// Deserialization function
-Task DeserializeTask(Buffer::Iterator& iter) {
-  uint32_t threads = iter.ReadU32();
-  uint32_t ram = iter.ReadU32();
-  uint32_t time = iter.ReadU32();
-  return Task(threads, ram, time);
-}
-
 std::string GenerateIPAddress(Ptr<Node> node) {
 
     Vector position = node->GetObject<MobilityModel> ()->GetPosition();
@@ -62,40 +45,8 @@ uint16_t GeneratePort(Ptr<Node> node) {
     return z;
 }
 
-void HandleRead(Ptr<Socket> socket) {
-    Ptr<Packet> packet = socket->Recv();
-    // Process the received data here
-    NS_LOG_DEBUG("Received data: " << packet->GetSize() << " bytes");
-}
+void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
 
-// Helper function to send data after a delay
-void SendData(Ptr<Node> node, Task task, Address serverAddress) {
-
-  // Serialize the task and send it using UDP
-  Buffer buffer;
-  SerializeTask(task, buffer);
-
-  uint8_t data[buffer.GetSize()];
-  buffer.CopyData(data, buffer.GetSize());
-
-  Ptr<Socket> socket = Socket::CreateSocket(node, UdpSocketFactory::GetTypeId());
-
-  socket->SetRecvCallback(MakeCallback(&HandleRead));
-
-  socket->Connect(serverAddress);
-
-  // Send the data using Socket::Send
-  uint32_t bytesSent = socket->Send(data, buffer.GetSize(), 0);
-
-  // Check if the send operation was successful
-  if (bytesSent == buffer.GetSize()) {
-    NS_LOG_DEBUG("Data sent successfully - Bytes sent: " << bytesSent);
-  } else {
-    NS_LOG_WARN("Failed to send all data - Bytes sent: " << bytesSent);
-  }
-}
-
-void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
   WifiHelper wifi;
   wifi.SetStandard(WIFI_STANDARD_80211b);
 
@@ -119,20 +70,6 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
   NetDeviceContainer centerDevices = wifi.Install(wifiPhy, wifiMac, centerNode);
   NetDeviceContainer otherDevices = wifi.Install(wifiPhy, wifiMac, otherNodes);
 
-
-  PointToPointHelper p2p;
-  // Create a P2P link between each otherNode and the centerNode
-  for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
-    p2p.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
-    p2p.SetDeviceAttribute("Mtu", UintegerValue(1400));
-    p2p.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
-
-    NetDeviceContainer link = p2p.Install(otherNodes.Get(i), centerNode.Get (0));
-
-  }
-
-  p2p.EnablePcapAll ("p2p");
-
   // Set up the Internet stack on all nodes
   InternetStackHelper internet;
   internet.Install(centerNode);
@@ -151,34 +88,35 @@ void CreateWiFiNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
 
   uint16_t serverPort = GeneratePort(node);
 
+  // Create a P2P link between each otherNode and the centerNode
   for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    p2p.SetDeviceAttribute("Mtu", UintegerValue(1400));
+    p2p.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
+    p2p.EnablePcapAll("p2p");
+
+    NetDeviceContainer link = p2p.Install(otherNodes.Get(i), centerNode.Get(0));
+
     Address serverAddress(InetSocketAddress(otherInterfaces.GetAddress(i, 0), serverPort));
 
-    //wifiPhy.EnablePcap("pcap/center-" + std::to_string(node->GetId()), centerDevices.Get(0), true);
-    //wifiPhy.EnablePcap("pcap/others-" + std::to_string(i), otherDevices.Get(i), true);
-
-    // Create a UDP server to receive data
-    PacketSinkHelper packetSinkHelper("ns3::UdpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), serverPort));
-    ApplicationContainer serverApps = packetSinkHelper.Install(otherNodes.Get(i));
+    // Create a simple UDP application
+    UdpServerHelper server(serverPort);
+    ApplicationContainer serverApps = server.Install(otherNodes.Get(i));
     serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(10.0)); // Adjust the stop time as needed
+    serverApps.Stop(Seconds(10.0));
 
-    // Create a UDP client on the centerNode to send data
-    Address clientAddress(InetSocketAddress(centerInterface.GetAddress(0), serverPort));
-    OnOffHelper onoff("ns3::UdpSocketFactory", clientAddress);
-    onoff.SetAttribute("PacketSize", UintegerValue(1024)); // Adjust packet size as needed
-    //onoff.SetAttribute("Remote", AddressValue(serverAddress)); // Set the server address
-    ApplicationContainer clientApps = onoff.Install(node);
-    clientApps.Start(Seconds(1.0));
-    clientApps.Stop(Seconds(5.0));
+    UdpClientHelper client(serverAddress, serverPort);
+    client.SetAttribute("MaxPackets", UintegerValue(1));
+    client.SetAttribute("Interval", TimeValue(Seconds(1.0)));
+    client.SetAttribute("PacketSize", UintegerValue(1024));
 
-    wifiPhy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-
-    // Wait for some time before sending the data
-    //Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
-    //Simulator::Schedule(Seconds(20.0), &SendData, node, task, serverAddress);
+    ApplicationContainer clientApps = client.Install(centerNode.Get(0));
+    clientApps.Start(Seconds(2.0));
+    clientApps.Stop(Seconds(10.0));
   }
 }
+
 
 std::queue<Task> GenerateTaskQueue() {
   std::queue<Task> taskQueue;
@@ -201,7 +139,7 @@ void PublishTask(Ptr<Node> node, NodeContainer& L1_nodes) {
   if (!tqueue.empty()) {
     Task task = tqueue.front();
 
-    CreateWiFiNetwork(node, L1_nodes, task);
+    CreateNetwork(node, L1_nodes, task);
 
     NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
     
