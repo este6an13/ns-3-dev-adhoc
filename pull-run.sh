@@ -1,3 +1,4 @@
+rm pcap/p2p-*
 git stash
 git stash clear
 git pull

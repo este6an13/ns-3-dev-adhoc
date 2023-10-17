@@ -20,6 +20,7 @@
 
 #include "ns3/names.h"
 #include "ns3/node-list.h"
+#include <vector>
 
 namespace ns3
 {
@@ -113,6 +114,21 @@ NodeContainer::Create(uint32_t n, uint32_t threads, uint32_t ram, std::queue<Tas
     for (uint32_t i = 0; i < n; i++)
     {
         m_nodes.push_back(CreateObject<Node>(threads, ram, tasks));
+    }
+}
+
+void NodeContainer::Create(uint32_t n, const std::vector<uint32_t>& threads, const std::vector<uint32_t>& rams, const std::vector<std::queue<Task>>& tasks)
+{
+    // Ensure that the input vectors have the same size
+    if (threads.size() != n || rams.size() != n || tasks.size() != n)
+    {
+        //NS_LOG_ERROR("Invalid input sizes");
+        return;
+    }
+
+    for (uint32_t i = 0; i < n; i++)
+    {
+        m_nodes.push_back(CreateObject<Node>(threads[i], rams[i], tasks[i]));
     }
 }
 
