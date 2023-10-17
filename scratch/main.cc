@@ -77,7 +77,7 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
   for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
 
     Ipv4InterfaceContainer interfaces = address.Assign (devices[i]);
-    address.NewNetwork ();
+    //address.NewNetwork ();
     
     // Create a simple UDP application
     UdpServerHelper server (serverPort);
