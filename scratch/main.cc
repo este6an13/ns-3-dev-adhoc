@@ -8,7 +8,7 @@
 #include "ns3/packet-sink-helper.h"
 #include "ns3/on-off-helper.h"
 #include "ns3/packet-sink.h"
-
+#include "ns3/vector.h"
 #include "ns3/applications-module.h"
 #include <ctime>
 #include <sstream>
@@ -94,7 +94,7 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
       NS_LOG_INFO(interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
 
       // Enable pcap tracing
-      p2p.EnablePcap ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(i), devices, true);
+      p2p.EnablePcap ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(otherNodes.Get (i)->GetId()), devices, true);
 
       // Create a simple UDP application
       UdpServerHelper server (serverPort);
@@ -129,12 +129,35 @@ std::queue<Task> GenerateTaskQueue() {
   return taskQueue;
 }
 
-void PublishTask(Ptr<Node> node, NodeContainer& L1_nodes) {
+NodeContainer GetNodesWithinRadius(Ptr<Node> node, NodeContainer& L1_nodes) {
+    double radius = 50.0;
+
+    NodeContainer neighbors;
+
+    // Get the position of the reference node
+    Vector L2_position = node->GetObject<MobilityModel>()->GetPosition();
+
+    // Iterate through all nodes
+    for (uint32_t i = 0; i < L1_nodes.GetN(); ++i) {
+        Ptr<MobilityModel> L1_mobility = L1_nodes.Get(i)->GetObject<MobilityModel>();
+
+        // Check if the distance to the reference node is within the radius
+        if (CalculateDistance(L1_mobility->GetPosition(), L2_position) <= radius) {
+            neighbors.Add(L1_nodes.Get(i));
+        }
+    }
+
+    return neighbors;
+}
+
+
+void PublishTask(Ptr<Node> node, NodeContainer& onodes) {
   std::queue<Task> tqueue = node->GetTasks();
   if (!tqueue.empty()) {
     Task task = tqueue.front();
-
-    CreateNetwork(node, L1_nodes);
+    
+    NodeContainer L1_neighbors = GetNodesWithinRadius(node, onodes);
+    CreateNetwork(node, L1_neighbors);
 
     NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
     
@@ -143,7 +166,7 @@ void PublishTask(Ptr<Node> node, NodeContainer& L1_nodes) {
   }
 
   // Schedule the next task processing event
-  Simulator::Schedule(Seconds(20), &PublishTask, node, L1_nodes);
+  Simulator::Schedule(Seconds(20), &PublishTask, node, onodes);
 }
 
 void LogNodePositions_L1 (NodeContainer& nodes)
@@ -190,6 +213,7 @@ int main (int argc, char *argv[])
   int N1 = 4;
   int N2 = 2;
 
+  // Create L1 nodes
   NodeContainer L1_nodes;
   for (int i = 0; i < N1; i++) {
     uint32_t threads = r_threads->GetInteger (1, 16);
@@ -197,13 +221,25 @@ int main (int argc, char *argv[])
     L1_nodes.Create (1, threads, ram);
   }
 
+  // Create L2 nodes
   NodeContainer L2_nodes;
   for (int i = 0; i < N2; i++) {
     uint32_t threads = r_threads->GetInteger (1, 16);
     uint32_t ram = r_ram->GetInteger (4, 16);
     std::queue<Task> queue = GenerateTaskQueue();
     L2_nodes.Create (1, threads, ram, queue);
-    Simulator::Schedule(Seconds(1), &PublishTask, L2_nodes.Get (i), L1_nodes);
+  }
+
+  // Schedule publishing
+  for (int i = 0; i < N2; i++) {
+    // other L2 nodes
+    NodeContainer L2_onodes;
+    for (int j = 0; j < N2; j++) {
+      if (i != j) {
+        L2_onodes.Add(L2_nodes.Get (j));
+      }
+    }
+    Simulator::Schedule(Seconds(1), &PublishTask, L2_nodes.Get (i), NodeContainer(L1_nodes, L2_onodes));
   }
 
   MobilityHelper mobility;
@@ -222,7 +258,7 @@ int main (int argc, char *argv[])
 
   //Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
   //Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
-  Simulator::Stop (Seconds (500));
+  Simulator::Stop (Seconds (1000));
   Simulator::Run ();
 
   Simulator::Destroy ();
