@@ -12,10 +12,65 @@
 #include "ns3/applications-module.h"
 #include <ctime>
 #include <sstream>
+#include <cmath>
+#include <vector>
+#include <iostream>
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DynamicNetworkSimulation");
+
+// Function to perform 2D knapsack using node information and task requirements
+NodeContainer KnapsackContest(NodeContainer& nodes, Task task) {
+    int Tmax = task.threads;
+    int Rmax = task.ram;
+
+    // Create a vector of tuples for GetThreads() and GetRAM() values of each node in nodes
+    std::vector<std::pair<int, int>> tuples;
+    for (uint32_t i = 0; i < nodes.GetN(); ++i) {
+      tuples.emplace_back(nodes.Get(i)->GetThreads(), nodes.Get(i)->GetRAM());
+    }
+    
+    NodeContainer selected;
+
+    // Here starts the actual 2D knapsack implementation
+    int n = tuples.size();
+
+    // Create a 2D vector to store the solutions to subproblems
+    std::vector<std::vector<double>> dp(Tmax + 1, std::vector<double>(Rmax + 1, 0.0));
+
+    // Iterate through each tuple and fill the dp vector
+    for (int i = 0; i < n; ++i) {
+        int T = tuples[i].first;
+        int R = tuples[i].second;
+        for (int t = Tmax; t >= T; --t) {
+            for (int r = Rmax; r >= R; --r) {
+                // Select the maximum value either by including or excluding the current tuple
+                dp[t][r] = std::max(dp[t][r], dp[t - T][r - R] + std::sqrt(T * T + R * R));
+            }
+        }
+    }
+
+    // The final value is stored in the bottom-right cell of the dp vector
+    // double max_value = dp[Tmax][Rmax];
+
+    // Retrieve the selected tuples
+    std::vector<std::pair<int, int>> selected_tuples;
+    int t = Tmax, r = Rmax;
+    for (int i = n - 1; i >= 0; --i) {
+        int T = tuples[i].first;
+        int R = tuples[i].second;
+
+        if (t >= T && r >= R && std::abs(dp[t][r] - (dp[t - T][r - R] + std::sqrt(T * T + R * R))) < 1e-9) {
+            selected_tuples.push_back(tuples[i]);
+            selected.Add(nodes.Get (i));
+            t -= T;
+            r -= R;
+        }
+    }
+
+    return selected;
+}
 
 std::string GenerateIPAddress(Ptr<Node> node) {
 
@@ -94,7 +149,7 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
       NS_LOG_INFO(interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
 
       // Enable pcap tracing
-      p2p.EnablePcap ("pcap/p2p-" + std::to_string(node->GetId()) + "-" + std::to_string(otherNodes.Get (i)->GetId()), devices, true);
+      p2p.EnablePcap ("pcap/p2p-pub-" + std::to_string(node->GetId()) + "-" + std::to_string(otherNodes.Get (i)->GetId()), devices, true);
 
       // Create a simple UDP application
       UdpServerHelper server (serverPort);
@@ -168,7 +223,7 @@ void ConnectNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
         NS_LOG_INFO("FULL: " << interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
 
         // Enable pcap tracing
-        p2p.EnablePcap ("pcap/p2p-" + std::to_string(NODES.Get (i)->GetId()) + "-" + std::to_string(NODES.Get (j)->GetId()), devices, true);
+        p2p.EnablePcap ("pcap/p2p-task-" + std::to_string(NODES.Get (i)->GetId()) + "-" + std::to_string(NODES.Get (j)->GetId()), devices, true);
 
         // Create a simple UDP application
         UdpServerHelper server (serverPort);
@@ -237,10 +292,16 @@ void PublishTask(Ptr<Node> node, NodeContainer& onodes) {
 
     NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
     
-    ConnectNetwork(node, L1_neighbors, task);
+    NodeContainer selected = KnapsackContest(L1_neighbors, task);
+    NS_LOG_INFO(selected.GetN());
+    if (selected.GetN() > 0) {
+      ConnectNetwork(node, selected, task);
 
-    tqueue.pop();
-    node->SetTasks(tqueue);
+      NS_LOG_INFO("Task Completed: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
+
+      tqueue.pop();
+      node->SetTasks(tqueue);
+    }
   }
 
   // Schedule the next task processing event
@@ -288,8 +349,8 @@ int main (int argc, char *argv[])
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
-  int N1 = 4;
-  int N2 = 2;
+  int N1 = 10;
+  int N2 = 4;
 
   // Create L1 nodes
   NodeContainer L1_nodes;
@@ -302,8 +363,8 @@ int main (int argc, char *argv[])
   // Create L2 nodes
   NodeContainer L2_nodes;
   for (int i = 0; i < N2; i++) {
-    uint32_t threads = r_threads->GetInteger (1, 16);
-    uint32_t ram = r_ram->GetInteger (4, 16);
+    uint32_t threads = r_threads->GetInteger (16, 64);
+    uint32_t ram = r_ram->GetInteger (16, 64);
     std::queue<Task> queue = GenerateTaskQueue();
     L2_nodes.Create (1, threads, ram, queue);
   }
@@ -336,7 +397,7 @@ int main (int argc, char *argv[])
 
   //Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
   //Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
-  Simulator::Stop (Seconds (1000));
+  Simulator::Stop (Seconds (10000));
   Simulator::Run ();
 
   Simulator::Destroy ();
