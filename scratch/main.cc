@@ -113,6 +113,82 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
   }
 }
 
+void ConnectNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
+
+  // Assign IP addresses
+  Ipv4AddressHelper address;
+  std::string ipAddress = GenerateIPAddress(node);
+  std::string subnetMask = "255.255.255.0";
+  NS_LOG_INFO(ipAddress);
+  NS_LOG_INFO(subnetMask);
+  address.SetBase (ipAddress.c_str(), subnetMask.c_str());
+  address.NewNetwork ();
+
+  uint16_t serverPort = GeneratePort(node);
+
+  NodeContainer NODES = NodeContainer(otherNodes);
+  NODES.Add(node);
+  
+  for (uint32_t i = 0; i < NODES.GetN(); ++i) {
+    for (uint32_t j = 0; j < NODES.GetN(); ++j) {
+      if (i != j) {
+        // Create nodes
+        NodeContainer nodes;
+
+        uint32_t threads_cnode = NODES.Get (i)->GetThreads();
+        uint32_t ram_cnode = NODES.Get (i)->GetRAM();
+        std::queue<Task> tasks_cnode = NODES.Get (i)->GetTasks();
+
+        // Extracting threads, ram, and tasks from otherNode
+        uint32_t threads_onode = NODES.Get (j)->GetThreads();
+        uint32_t ram_onode = NODES.Get (j)->GetRAM();
+        std::queue<Task> tasks_onode = NODES.Get (j)->GetTasks();
+
+        // Create vectors to pass to NodeContainer::Create
+        std::vector<uint32_t> threads = {threads_cnode, threads_onode};
+        std::vector<uint32_t> rams = {ram_cnode, ram_onode};
+        std::vector<std::queue<Task>> tasks = {tasks_cnode, tasks_onode};
+
+        // Call NodeContainer::Create
+        nodes.Create(2, threads, rams, tasks);
+        
+        // Create p2p link
+        PointToPointHelper p2p;
+        p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+        p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
+        NetDeviceContainer devices;
+        devices = p2p.Install (nodes);
+
+        // Install internet stack
+        InternetStackHelper stack;
+        stack.Install (nodes);
+
+        Ipv4InterfaceContainer interfaces = address.Assign (devices);
+        NS_LOG_INFO("FULL: " << interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
+
+        // Enable pcap tracing
+        p2p.EnablePcap ("pcap/p2p-" + std::to_string(NODES.Get (i)->GetId()) + "-" + std::to_string(NODES.Get (j)->GetId()), devices, true);
+
+        // Create a simple UDP application
+        UdpServerHelper server (serverPort);
+        ApplicationContainer serverApps = server.Install (nodes.Get (1));
+        serverApps.Start (Seconds (1.0));
+        serverApps.Stop (Seconds (task.time));
+
+        UdpClientHelper client (interfaces.GetAddress (1), serverPort);
+        client.SetAttribute ("MaxPackets", UintegerValue (task.time));
+        client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+        client.SetAttribute ("PacketSize", UintegerValue (1024));
+
+        ApplicationContainer clientApps = client.Install (nodes.Get (0));
+        clientApps.Start (Seconds (2.0));
+        clientApps.Stop (Seconds (task.time));
+      }
+    }
+  }
+}
+
 std::queue<Task> GenerateTaskQueue() {
   std::queue<Task> taskQueue;
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
@@ -123,7 +199,7 @@ std::queue<Task> GenerateTaskQueue() {
   for (int i = 0; i < n_tasks; i++) {
     uint32_t threads = r_threads->GetInteger (4, 64);
     uint32_t ram = r_ram->GetInteger (12, 64);
-    uint32_t time = r_time->GetInteger (1, 10);
+    uint32_t time = r_time->GetInteger (10, 50);
     taskQueue.push(Task(threads, ram, time));
   }
   return taskQueue;
@@ -161,6 +237,8 @@ void PublishTask(Ptr<Node> node, NodeContainer& onodes) {
 
     NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
     
+    ConnectNetwork(node, L1_neighbors, task);
+
     tqueue.pop();
     node->SetTasks(tqueue);
   }
