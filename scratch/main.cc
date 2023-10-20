@@ -10,6 +10,7 @@
 #include "ns3/packet-sink.h"
 #include "ns3/vector.h"
 #include "ns3/applications-module.h"
+#include "ns3/ascii-file.h"
 #include <ctime>
 #include <sstream>
 #include <cmath>
@@ -100,19 +101,19 @@ uint16_t GeneratePort(Ptr<Node> node) {
     return z;
 }
 
-void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
+void CreateNetwork(Ptr<Node> node, NodeContainer& neighbors, int taskId) {
 
     // Assign IP addresses
     Ipv4AddressHelper address;
     std::string ipAddress = GenerateIPAddress(node);
     std::string subnetMask = "255.255.255.0";
-    NS_LOG_INFO(ipAddress);
-    NS_LOG_INFO(subnetMask);
+    //NS_LOG_INFO(ipAddress);
+    //NS_LOG_INFO(subnetMask);
     address.SetBase (ipAddress.c_str(), subnetMask.c_str());
 
     uint16_t serverPort = GeneratePort(node);
     
-    for (uint32_t i = 0; i < otherNodes.GetN(); ++i) {
+    for (uint32_t i = 0; i < neighbors.GetN(); ++i) {
       // Create nodes
       NodeContainer nodes;
 
@@ -121,9 +122,9 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
       std::queue<Task> tasks_cnode = node->GetTasks();
 
       // Extracting threads, ram, and tasks from otherNode
-      uint32_t threads_onode = otherNodes.Get (i)->GetThreads();
-      uint32_t ram_onode = otherNodes.Get (i)->GetRAM();
-      std::queue<Task> tasks_onode = otherNodes.Get (i)->GetTasks();
+      uint32_t threads_onode = neighbors.Get (i)->GetThreads();
+      uint32_t ram_onode = neighbors.Get (i)->GetRAM();
+      std::queue<Task> tasks_onode = neighbors.Get (i)->GetTasks();
 
       // Create vectors to pass to NodeContainer::Create
       std::vector<uint32_t> threads = {threads_cnode, threads_onode};
@@ -146,10 +147,12 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
       stack.Install (nodes);
 
       Ipv4InterfaceContainer interfaces = address.Assign (devices);
-      NS_LOG_INFO(interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
-
+      //NS_LOG_INFO(interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
+      
+      NS_LOG_INFO ("[CANDIDATES] : " << node->GetId() << "," << taskId << "," << interfaces.GetAddress (0) << "," << interfaces.GetAddress (1) << "," << neighbors.Get (i)->GetId());
+      
       // Enable pcap tracing
-      p2p.EnablePcap ("pcap/p2p-pub-" + std::to_string(node->GetId()) + "-" + std::to_string(otherNodes.Get (i)->GetId()), devices, true);
+      p2p.EnablePcap ("pcap/p2p-pub-" + std::to_string(node->GetId()) + "-" + std::to_string(neighbors.Get (i)->GetId()), devices, true);
 
       // Create a simple UDP application
       UdpServerHelper server (serverPort);
@@ -168,20 +171,20 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& otherNodes) {
   }
 }
 
-void ConnectNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
+void ConnectNetwork(Ptr<Node> node, NodeContainer& selected, Task task, int taskId) {
 
   // Assign IP addresses
   Ipv4AddressHelper address;
   std::string ipAddress = GenerateIPAddress(node);
   std::string subnetMask = "255.255.255.0";
-  NS_LOG_INFO(ipAddress);
-  NS_LOG_INFO(subnetMask);
+  //NS_LOG_INFO(ipAddress);
+  //NS_LOG_INFO(subnetMask);
   address.SetBase (ipAddress.c_str(), subnetMask.c_str());
   address.NewNetwork ();
 
   uint16_t serverPort = GeneratePort(node);
 
-  NodeContainer NODES = NodeContainer(otherNodes);
+  NodeContainer NODES = NodeContainer(selected);
   NODES.Add(node);
   
   for (uint32_t i = 0; i < NODES.GetN(); ++i) {
@@ -220,7 +223,8 @@ void ConnectNetwork(Ptr<Node> node, NodeContainer& otherNodes, Task task) {
         stack.Install (nodes);
 
         Ipv4InterfaceContainer interfaces = address.Assign (devices);
-        NS_LOG_INFO("FULL: " << interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
+        //NS_LOG_INFO("FULL: " << interfaces.GetAddress (0) << " - " << interfaces.GetAddress (1));
+        NS_LOG_INFO ("[JOBS] : " << node->GetId() << "," << taskId << "," << interfaces.GetAddress (0) << "," << interfaces.GetAddress (1) << "," << NODES.Get (i)->GetId() << "," << NODES.Get (j)->GetId());
 
         // Enable pcap tracing
         p2p.EnablePcap ("pcap/p2p-task-" + std::to_string(NODES.Get (i)->GetId()) + "-" + std::to_string(NODES.Get (j)->GetId()), devices, true);
@@ -255,7 +259,7 @@ std::queue<Task> GenerateTaskQueue() {
     uint32_t threads = r_threads->GetInteger (4, 64);
     uint32_t ram = r_ram->GetInteger (12, 64);
     uint32_t time = r_time->GetInteger (10, 50);
-    taskQueue.push(Task(threads, ram, time));
+    taskQueue.push(Task(i, threads, ram, time));
   }
   return taskQueue;
 }
@@ -286,22 +290,34 @@ void PublishTask(Ptr<Node> node, NodeContainer& onodes) {
   std::queue<Task> tqueue = node->GetTasks();
   if (!tqueue.empty()) {
     Task task = tqueue.front();
-    
-    NodeContainer L1_neighbors = GetNodesWithinRadius(node, onodes);
-    CreateNetwork(node, L1_neighbors);
 
-    NS_LOG_INFO("Published Task: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
+    Time pubTime = Simulator::Now();
+    Time startTime;
+    Time endTime;
     
-    NodeContainer selected = KnapsackContest(L1_neighbors, task);
-    NS_LOG_INFO(selected.GetN());
+    NodeContainer neighbors = GetNodesWithinRadius(node, onodes);
+    CreateNetwork(node, neighbors, task.id);
+    NodeContainer selected = KnapsackContest(neighbors, task);
     if (selected.GetN() > 0) {
-      ConnectNetwork(node, selected, task);
-
-      NS_LOG_INFO("Task Completed: " << "Node=" << node->GetId() <<  " Threads=" << task.threads << " RAM=" << task.ram << " Time=" << task.time << " Tasks=" << tqueue.size());
+      startTime = Simulator::Now();
+      ConnectNetwork(node, selected, task, task.id);
+      endTime = Simulator::Now();
 
       tqueue.pop();
       node->SetTasks(tqueue);
     }
+    else {
+      tqueue.pop();
+      tqueue.push(task);
+      node->SetTasks(tqueue);
+    }
+    int covered_ram = 0;
+    int covered_threads = 0;
+    for (uint32_t i = 0; i < selected.GetN(); ++i) {
+      covered_ram += selected.Get (i)->GetRAM();
+      covered_threads += selected.Get (i)->GetThreads();
+    }
+    NS_LOG_INFO ("[TASKS] : " << "L2" << "," << node->GetId() << "," << task.id << "," << task.ram << "," << task.threads << "," << task.time << "," << pubTime << "," << startTime << "," << endTime << "," << covered_ram << "," << covered_threads);
   }
 
   // Schedule the next task processing event
@@ -310,28 +326,40 @@ void PublishTask(Ptr<Node> node, NodeContainer& onodes) {
 
 void LogNodePositions_L1 (NodeContainer& nodes)
 {
+  std::ofstream logfile;
+  logfile.open("positions.txt", std::ios::app);
+
   for (uint32_t i = 0; i < nodes.GetN (); ++i)
   {
     Ptr<MobilityModel> mobility = nodes.Get (i)->GetObject<MobilityModel> ();
     Vector position = mobility->GetPosition ();
-    NS_LOG_INFO ("Node L1 " << i << " Position: " << position);
+    //NS_LOG_INFO ("[POSITIONS] : " << "L1" << "," << i << "," << position.x << "," << position.y << "," << Simulator::Now());
+    logfile << "[POSITIONS] : " << "L1" << "," << i << "," << position.x << "," << position.y << "," << Simulator::Now() << std::endl;
   }
 
+  logfile.close();
+
   // Schedule the next logging event
-  Simulator::Schedule (Seconds (1), &LogNodePositions_L1, nodes);
+  Simulator::Schedule (Seconds(1), &LogNodePositions_L1, nodes);
 }
 
 void LogNodePositions_L2 (NodeContainer& nodes)
 {
+  std::ofstream logfile;
+  logfile.open("positions.txt", std::ios::app);
+
   for (uint32_t i = 0; i < nodes.GetN (); ++i)
   {
     Ptr<MobilityModel> mobility = nodes.Get (i)->GetObject<MobilityModel> ();
     Vector position = mobility->GetPosition ();
-    NS_LOG_INFO ("Node L2 " << i << " Position: " << position);
+    //NS_LOG_INFO ("[POSITIONS] : " << "L2" << "," << nodes.Get (i)->GetId() << "," << position.x << "," << position.y << "," << Simulator::Now());
+    logfile << "[POSITIONS] : " << "L2" << "," << nodes.Get (i)->GetId() << "," << position.x << "," << position.y << "," << Simulator::Now() << std::endl;  
   }
 
+  logfile.close();
+
   // Schedule the next logging event
-  Simulator::Schedule (Seconds (1), &LogNodePositions_L2, nodes);
+  Simulator::Schedule (Seconds(1), &LogNodePositions_L2, nodes);
 }
 
 int main (int argc, char *argv[])
@@ -341,7 +369,6 @@ int main (int argc, char *argv[])
   CommandLine cmd;
   cmd.Parse (argc, argv);
 
-  Time::SetResolution (Time::NS);
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_ALL);
 
   std::queue<Task> taskQueue = GenerateTaskQueue();
@@ -358,6 +385,7 @@ int main (int argc, char *argv[])
     uint32_t threads = r_threads->GetInteger (1, 16);
     uint32_t ram = r_ram->GetInteger (4, 16);
     L1_nodes.Create (1, threads, ram);
+    NS_LOG_INFO ("[NODES] : " << "L1" << "," << i << "," << ram << "," << threads << "," << 0);
   }
 
   // Create L2 nodes
@@ -367,6 +395,7 @@ int main (int argc, char *argv[])
     uint32_t ram = r_ram->GetInteger (16, 64);
     std::queue<Task> queue = GenerateTaskQueue();
     L2_nodes.Create (1, threads, ram, queue);
+    NS_LOG_INFO ("[NODES] : " << "L2" << "," << N1 + i << "," << ram << "," << threads << "," << queue.size());
   }
 
   // Schedule publishing
@@ -395,9 +424,9 @@ int main (int argc, char *argv[])
   mobility.Install (L1_nodes);
   mobility.Install (L2_nodes);
 
-  //Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
-  //Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
-  Simulator::Stop (Seconds (10000));
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
+  Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
+  Simulator::Stop (Seconds (250));
   Simulator::Run ();
 
   Simulator::Destroy ();
