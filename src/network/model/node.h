@@ -42,7 +42,7 @@ struct Task {
   uint32_t ram;
   uint32_t time;
 
-  Task(uint32_t id, uint32_t threads, uint32_t ram, uint32_t time) : threads(threads), ram(ram), time(time) {}
+  Task(uint32_t id, uint32_t threads, uint32_t ram, uint32_t time) : id(id), threads(threads), ram(ram), time(time) {}
 };
 
 /**
