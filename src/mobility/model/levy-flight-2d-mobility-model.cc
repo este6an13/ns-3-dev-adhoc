@@ -60,6 +60,11 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           "A random variable used to pick the speed (m/s).",
                           StringValue("ns3::UniformRandomVariable[Min=2.0|Max=4.0]"),
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_speed),
+                          MakePointerChecker<RandomVariableStream>())
+            .AddAttribute("StepSize",
+                          "A random variable used to pick the speed (m/s).",
+                          StringValue("ns3::UniformRandomVariable[Min=2.0|Max=20.0]"),
+                          MakePointerAccessor(&LevyFlight2dMobilityModel::m_stepSize),
                           MakePointerChecker<RandomVariableStream>());
     return tid;
 }
@@ -83,7 +88,7 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     m_helper.Unpause();
 
     // Levy flight implementation
-    double stepLength = m_stepSize * std::pow(m_direction->GetValue(), -1.0 / m_alpha);
+    double stepLength = std::pow(m_stepSize->GetValue(), -1.0 / m_alpha);
     Vector newPosition = position;
     newPosition.x += std::cos(direction) * stepLength;
     newPosition.y += std::sin(direction) * stepLength;

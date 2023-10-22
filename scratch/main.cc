@@ -152,7 +152,7 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& neighbors, int taskId) {
       NS_LOG_INFO ("[CANDIDATES] : " << node->GetId() << "," << taskId << "," << interfaces.GetAddress (0) << "," << interfaces.GetAddress (1) << "," << neighbors.Get (i)->GetId());
       
       // Enable pcap tracing
-      p2p.EnablePcap ("pcap/p2p-pub-" + std::to_string(node->GetId()) + "-" + std::to_string(neighbors.Get (i)->GetId()), devices, true);
+      //p2p.EnablePcap ("pcap/p2p-pub-" + std::to_string(node->GetId()) + "-" + std::to_string(neighbors.Get (i)->GetId()), devices, true);
 
       // Create a simple UDP application
       UdpServerHelper server (serverPort);
