@@ -1,5 +1,6 @@
 clear
 rm pcap/p2p-*
+rm positions.txt
 git stash
 git stash clear
 git pull
