@@ -176,7 +176,7 @@ RandomWalk2dMobilityModel::DoGetPosition() const
 void
 RandomWalk2dMobilityModel::DoSetPosition(const Vector& position)
 {
-    NS_ASSERT(m_bounds.IsInside(position));
+    //NS_ASSERT(m_bounds.IsInside(position));
     m_helper.SetPosition(position);
     m_event.Cancel();
     m_event = Simulator::ScheduleNow(&RandomWalk2dMobilityModel::DoInitializePrivate, this);

@@ -162,7 +162,8 @@ void CreateNetwork(Ptr<Node> node, NodeContainer& neighbors, int taskId) {
 
       UdpClientHelper client (interfaces.GetAddress (1), serverPort);
       client.SetAttribute ("MaxPackets", UintegerValue (1));
-      client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+      Ptr<ExponentialRandomVariable> r_time = CreateObject<ExponentialRandomVariable> ();
+      client.SetAttribute ("Interval", TimeValue (Seconds (1.0 + r_time->GetValue())));
       client.SetAttribute ("PacketSize", UintegerValue (1024));
 
       ApplicationContainer clientApps = client.Install (nodes.Get (0));
@@ -227,7 +228,7 @@ void ConnectNetwork(Ptr<Node> node, NodeContainer& selected, Task task, int task
         NS_LOG_INFO ("[JOBS] : " << node->GetId() << "," << taskId << "," << interfaces.GetAddress (0) << "," << interfaces.GetAddress (1) << "," << NODES.Get (i)->GetId() << "," << NODES.Get (j)->GetId());
 
         // Enable pcap tracing
-        p2p.EnablePcap ("pcap/p2p-task-" + std::to_string(NODES.Get (i)->GetId()) + "-" + std::to_string(NODES.Get (j)->GetId()), devices, true);
+        //p2p.EnablePcap ("pcap/p2p-task-" + std::to_string(NODES.Get (i)->GetId()) + "-" + std::to_string(NODES.Get (j)->GetId()), devices, true);
 
         // Create a simple UDP application
         UdpServerHelper server (serverPort);
@@ -237,7 +238,8 @@ void ConnectNetwork(Ptr<Node> node, NodeContainer& selected, Task task, int task
 
         UdpClientHelper client (interfaces.GetAddress (1), serverPort);
         client.SetAttribute ("MaxPackets", UintegerValue (task.time));
-        client.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+        Ptr<ExponentialRandomVariable> r_time = CreateObject<ExponentialRandomVariable> ();
+        client.SetAttribute ("Interval", TimeValue (Seconds (1.0 + r_time->GetValue())));
         client.SetAttribute ("PacketSize", UintegerValue (1024));
 
         ApplicationContainer clientApps = client.Install (nodes.Get (0));
@@ -321,7 +323,8 @@ void PublishTask(Ptr<Node> node, NodeContainer& onodes) {
   }
 
   // Schedule the next task processing event
-  Simulator::Schedule(Seconds(20), &PublishTask, node, onodes);
+  Ptr<ExponentialRandomVariable> r_time = CreateObject<ExponentialRandomVariable> ();
+  Simulator::Schedule(Seconds(20.0 + r_time->GetValue()), &PublishTask, node, onodes);
 }
 
 void LogNodePositions_L1 (NodeContainer& nodes)
@@ -376,7 +379,7 @@ int main (int argc, char *argv[])
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
-  int N1 = 10;
+  int N1 = 16;
   int N2 = 4;
 
   // Create L1 nodes
