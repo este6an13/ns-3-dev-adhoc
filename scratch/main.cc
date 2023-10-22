@@ -379,7 +379,7 @@ int main (int argc, char *argv[])
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
-  int N1 = 16;
+  int N1 = 10;
   int N2 = 4;
 
   // Create L1 nodes
