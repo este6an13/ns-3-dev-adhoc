@@ -46,11 +46,6 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           TimeValue(Seconds(1.0)),
                           MakeTimeAccessor(&LevyFlight2dMobilityModel::m_modeTime),
                           MakeTimeChecker())
-            .AddAttribute("Alpha",
-                          "Exponent parameter for the Levy flight distribution.",
-                          DoubleValue(2.0),
-                          MakeDoubleAccessor(&LevyFlight2dMobilityModel::m_alpha),
-                          MakeDoubleChecker<double>())
             .AddAttribute("Direction",
                           "A random variable used to pick the direction (radians).",
                           StringValue("ns3::UniformRandomVariable[Min=0.0|Max=6.283184]"),
@@ -62,8 +57,8 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_speed),
                           MakePointerChecker<RandomVariableStream>())
             .AddAttribute("StepSize",
-                          "A random variable used to pick the speed (m/s).",
-                          StringValue("ns3::UniformRandomVariable[Min=2.0|Max=20.0]"),
+                          "A random variable used to pick the step size.",
+                          StringValue("ns3::ParetoRandomVariable"),
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_stepSize),
                           MakePointerChecker<RandomVariableStream>());
     return tid;
@@ -88,7 +83,7 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     m_helper.Unpause();
 
     // Levy flight implementation
-    double stepLength = std::pow(m_stepSize->GetValue(), -1.0 / m_alpha);
+    double stepLength = m_stepSize->GetValue();
     Vector newPosition = position;
     newPosition.x += std::cos(direction) * stepLength;
     newPosition.y += std::sin(direction) * stepLength;
