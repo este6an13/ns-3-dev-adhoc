@@ -99,8 +99,8 @@ LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
     Vector position = m_helper.GetCurrentPosition();
     Vector speed = m_helper.GetVelocity();
     Vector nextPosition = position;
-    nextPosition.x += speed.x * delayLeft.GetSeconds();
-    nextPosition.y += speed.y * delayLeft.GetSeconds();
+    nextPosition.x += speed.x * m_stepSize->GetValue() *  delayLeft.GetSeconds();
+    nextPosition.y += speed.y * m_stepSize->GetValue() * delayLeft.GetSeconds();
 
     m_event.Cancel();
             m_event =
