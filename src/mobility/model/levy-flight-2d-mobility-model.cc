@@ -75,10 +75,10 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     m_helper.Update();
     //Vector position = m_helper.GetCurrentPosition();
 
-    double speed = m_speed->GetValue();
+    //double speed = m_speed->GetValue();
     double direction = m_direction->GetValue();
 
-    Vector vector(std::cos(direction) * speed * m_stepSize->GetValue(), std::sin(direction) * speed * m_stepSize->GetValue(), 0.0);
+    Vector vector(std::cos(direction) * 1.0 * m_stepSize->GetValue(), std::sin(direction) * 1.0 * m_stepSize->GetValue(), 0.0);
     m_helper.SetVelocity(vector);
     m_helper.Unpause();
 
