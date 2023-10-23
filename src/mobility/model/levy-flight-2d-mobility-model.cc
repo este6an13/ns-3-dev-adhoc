@@ -157,7 +157,8 @@ int64_t LevyFlight2dMobilityModel::DoAssignStreams(int64_t stream)
 {
     m_speed->SetStream(stream);
     m_direction->SetStream(stream + 1);
-    return 2;
+    m_stepSize->SetStream(stream + 2);
+    return 3;
 }
 
 } // namespace ns3
