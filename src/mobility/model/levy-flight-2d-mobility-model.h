@@ -46,7 +46,7 @@ private:
 
     ConstantVelocityHelper m_helper;
     EventId m_event;
-    double m_stepSize;
+    Ptr<RandomVariableStream> m_stepSize;
     double m_alpha;
     Time m_modeTime;
     Ptr<RandomVariableStream> m_speed;

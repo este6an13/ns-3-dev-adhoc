@@ -46,11 +46,6 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           TimeValue(Seconds(1.0)),
                           MakeTimeAccessor(&LevyFlight2dMobilityModel::m_modeTime),
                           MakeTimeChecker())
-            .AddAttribute("Alpha",
-                          "Exponent parameter for the Levy flight distribution.",
-                          DoubleValue(2.0),
-                          MakeDoubleAccessor(&LevyFlight2dMobilityModel::m_alpha),
-                          MakeDoubleChecker<double>())
             .AddAttribute("Direction",
                           "A random variable used to pick the direction (radians).",
                           StringValue("ns3::UniformRandomVariable[Min=0.0|Max=6.283184]"),
@@ -60,6 +55,11 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           "A random variable used to pick the speed (m/s).",
                           StringValue("ns3::UniformRandomVariable[Min=2.0|Max=4.0]"),
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_speed),
+                          MakePointerChecker<RandomVariableStream>())
+            .AddAttribute("StepSize",
+                          "A random variable used to pick the speed (m/s).",
+                          StringValue("ns3::ParetoRandomVariable"),
+                          MakePointerAccessor(&LevyFlight2dMobilityModel::m_stepSize),
                           MakePointerChecker<RandomVariableStream>());
     return tid;
 }
@@ -82,11 +82,7 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     m_helper.SetVelocity(vector);
     m_helper.Unpause();
 
-    // Levy flight implementation
-    double stepLength = m_stepSize * std::pow(m_direction->GetValue(), -1.0 / m_alpha);
-    Vector newPosition = position;
-    newPosition.x += std::cos(direction) * stepLength;
-    newPosition.y += std::sin(direction) * stepLength;
+    double stepLength = m_stepSize->GetValue();
 
     Time delayLeft = m_modeTime;
 
@@ -99,8 +95,8 @@ LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
     Vector position = m_helper.GetCurrentPosition();
     Vector speed = m_helper.GetVelocity();
     Vector nextPosition = position;
-    nextPosition.x += speed.x * delayLeft.GetSeconds();
-    nextPosition.y += speed.y * delayLeft.GetSeconds();
+    nextPosition.x += speed.x * m_stepSize->GetValue() * delayLeft.GetSeconds();
+    nextPosition.y += speed.y * m_stepSize->GetValue() * delayLeft.GetSeconds();
 
     m_event.Cancel();
             m_event =
@@ -157,7 +153,8 @@ int64_t LevyFlight2dMobilityModel::DoAssignStreams(int64_t stream)
 {
     m_speed->SetStream(stream);
     m_direction->SetStream(stream + 1);
-    return 2;
+    m_stepSize->SetStream(stream + 2);
+    return 3;
 }
 
 } // namespace ns3
