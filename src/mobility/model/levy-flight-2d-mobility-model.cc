@@ -58,7 +58,7 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           MakePointerChecker<RandomVariableStream>())
             .AddAttribute("StepSize",
                             "A random variable used to pick the step size (m).",
-                            StringValue("ns3::ParetoRandomVariable[Scale=3.0|Shape=3.0]"),
+                            StringValue("ns3::NormalRandomVariable"),
                             MakePointerAccessor(&LevyFlight2dMobilityModel::m_stepSize),
                             MakePointerChecker<RandomVariableStream>());
     return tid;
