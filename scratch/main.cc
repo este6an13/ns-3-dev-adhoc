@@ -16,8 +16,6 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
-#include <random>
-#include <chrono>
 
 using namespace ns3;
 
@@ -82,15 +80,6 @@ std::string GenerateIPAddress(Ptr<Node> node) {
     double x = position.x;
     double y = position.y;
     double z = x * y + node->GetId();
-
-    if (static_cast<int>(x) == 0 && static_cast<int>(y) == 0) {
-      unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-      std::default_random_engine generator(seed);
-      std::uniform_int_distribution<int> distribution(0, 256);
-      x = distribution(generator);
-      y = distribution(generator);
-      z = x * y + node->GetId();
-    }
 
     // Apply modulus to ensure values are within the range [0, 255]
     z = std::fmod(z, 256.0);
@@ -267,7 +256,7 @@ std::queue<Task> GenerateTaskQueue() {
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_time = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_tasks = CreateObject<UniformRandomVariable> ();
-  int n_tasks = r_tasks->GetInteger (10, 30);
+  int n_tasks = r_tasks->GetInteger (5, 10);
   for (int i = 0; i < n_tasks; i++) {
     uint32_t threads = r_threads->GetInteger (4, 64);
     uint32_t ram = r_ram->GetInteger (12, 64);
@@ -391,8 +380,8 @@ int main (int argc, char *argv[])
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
-  int N1 = 50;
-  int N2 = 10;
+  int N1 = 10;
+  int N2 = 4;
 
   // Create L1 nodes
   NodeContainer L1_nodes;
@@ -406,8 +395,8 @@ int main (int argc, char *argv[])
   // Create L2 nodes
   NodeContainer L2_nodes;
   for (int i = 0; i < N2; i++) {
-    uint32_t threads = r_threads->GetInteger (1, 16);
-    uint32_t ram = r_ram->GetInteger (4, 16);
+    uint32_t threads = r_threads->GetInteger (16, 64);
+    uint32_t ram = r_ram->GetInteger (16, 64);
     std::queue<Task> queue = GenerateTaskQueue();
     L2_nodes.Create (1, threads, ram, queue);
     NS_LOG_INFO ("[NODES] : " << "L2" << "," << N1 + i << "," << ram << "," << threads << "," << queue.size());
@@ -441,7 +430,7 @@ int main (int argc, char *argv[])
 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
-  Simulator::Stop (Seconds (500));
+  Simulator::Stop (Seconds (250));
   Simulator::Run ();
 
   Simulator::Destroy ();
