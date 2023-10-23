@@ -83,7 +83,7 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     m_helper.Unpause();
 
     // Levy flight implementation
-    double stepLength = m_stepSize->GetValue();
+    double stepLength = std::pow(m_stepSize->GetValue(), -1.0 / m_alpha);
     Vector newPosition = position;
     newPosition.x += std::cos(direction) * stepLength;
     newPosition.y += std::sin(direction) * stepLength;
@@ -99,8 +99,8 @@ LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
     Vector position = m_helper.GetCurrentPosition();
     Vector speed = m_helper.GetVelocity();
     Vector nextPosition = position;
-    nextPosition.x += m_stepSize->GetValue() * delayLeft.GetSeconds();
-    nextPosition.y += m_stepSize->GetValue() * delayLeft.GetSeconds();
+    nextPosition.x += std::pow(m_stepSize->GetValue(), -1.0 / m_alpha) * delayLeft.GetSeconds();
+    nextPosition.y += std::pow(m_stepSize->GetValue(), -1.0 / m_alpha) * delayLeft.GetSeconds();
 
     m_event.Cancel();
             m_event =
