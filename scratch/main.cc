@@ -256,7 +256,7 @@ std::queue<Task> GenerateTaskQueue() {
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_time = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_tasks = CreateObject<UniformRandomVariable> ();
-  int n_tasks = r_tasks->GetInteger (5, 20);
+  int n_tasks = r_tasks->GetInteger (5, 10);
   for (int i = 0; i < n_tasks; i++) {
     uint32_t threads = r_threads->GetInteger (4, 64);
     uint32_t ram = r_ram->GetInteger (12, 64);
@@ -379,8 +379,8 @@ int main (int argc, char *argv[])
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
-  int N1 = 50;
-  int N2 = 10;
+  int N1 = 10;
+  int N2 = 4;
 
   // Create L1 nodes
   NodeContainer L1_nodes;
@@ -429,7 +429,7 @@ int main (int argc, char *argv[])
 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L1, std::ref(L1_nodes)); 
   Simulator::Schedule (Seconds (1), &LogNodePositions_L2, std::ref(L2_nodes));  
-  Simulator::Stop (Seconds (500));
+  Simulator::Stop (Seconds (250));
   Simulator::Run ();
 
   Simulator::Destroy ();
