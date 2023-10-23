@@ -382,7 +382,7 @@ int main (int argc, char *argv[])
   Ptr<UniformRandomVariable> r_threads = CreateObject<UniformRandomVariable> ();
   Ptr<UniformRandomVariable> r_ram = CreateObject<UniformRandomVariable> ();
 
-  int N1 = 10;
+  int N1 = 20;
   int N2 = 4;
 
   // Create L1 nodes
@@ -397,8 +397,8 @@ int main (int argc, char *argv[])
   // Create L2 nodes
   NodeContainer L2_nodes;
   for (int i = 0; i < N2; i++) {
-    uint32_t threads = r_threads->GetInteger (16, 64);
-    uint32_t ram = r_ram->GetInteger (16, 64);
+    uint32_t threads = r_threads->GetInteger (1, 16);
+    uint32_t ram = r_ram->GetInteger (4, 16);
     std::queue<Task> queue = GenerateTaskQueue();
     L2_nodes.Create (1, threads, ram, queue);
     NS_LOG_INFO ("[NODES] : " << "L2" << "," << N1 + i << "," << ram << "," << threads << "," << queue.size());
