@@ -373,6 +373,7 @@ int main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
   LogComponentEnable ("DynamicNetworkSimulation", LOG_LEVEL_ALL);
+  //LogComponentEnable ("LevyFlight2d", LOG_LEVEL_ALL);
 
   std::queue<Task> taskQueue = GenerateTaskQueue();
 
