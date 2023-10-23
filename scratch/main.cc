@@ -77,11 +77,13 @@ std::string GenerateIPAddress(Ptr<Node> node) {
 
     Vector position = node->GetObject<MobilityModel> ()->GetPosition();
 
-    double x = position.x;
-    double y = position.y;
+    double x = position.x + 10000;
+    double y = position.y + 10000;
     double z = x * y + node->GetId();
 
     // Apply modulus to ensure values are within the range [0, 255]
+    x = std::fmod(y, 256.0);
+    y = std::fmod(x, 256.0);
     z = std::fmod(z, 256.0);
 
     return std::to_string(static_cast<int>(x + node->GetId())) + "." + std::to_string(static_cast<int>(y + node->GetId())) + "." + std::to_string(static_cast<int>(z)) + ".0";
