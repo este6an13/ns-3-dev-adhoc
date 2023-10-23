@@ -51,11 +51,6 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           StringValue("ns3::UniformRandomVariable[Min=0.0|Max=6.283184]"),
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_direction),
                           MakePointerChecker<RandomVariableStream>())
-            .AddAttribute("Speed",
-                          "A random variable used to pick the speed (m/s).",
-                          StringValue("ns3::UniformRandomVariable[Min=2.0|Max=4.0]"),
-                          MakePointerAccessor(&LevyFlight2dMobilityModel::m_speed),
-                          MakePointerChecker<RandomVariableStream>())
             .AddAttribute("StepSize",
                           "A random variable used to pick the speed (m/s).",
                           StringValue("ns3::ParetoRandomVariable"),
