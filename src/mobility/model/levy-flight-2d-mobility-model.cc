@@ -81,12 +81,8 @@ void LevyFlight2dMobilityModel::DoInitializePrivate()
     Vector vector(std::cos(direction) * speed, std::sin(direction) * speed, 0.0);
     m_helper.SetVelocity(vector);
     m_helper.Unpause();
-
-    // Levy flight implementation
+    
     double stepLength = m_stepSize->GetValue();
-    Vector newPosition = position;
-    newPosition.x += std::cos(direction) * stepLength;
-    newPosition.y += std::sin(direction) * stepLength;
 
     Time delayLeft = m_modeTime;
 
