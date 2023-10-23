@@ -46,6 +46,11 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           TimeValue(Seconds(1.0)),
                           MakeTimeAccessor(&LevyFlight2dMobilityModel::m_modeTime),
                           MakeTimeChecker())
+            .AddAttribute("Alpha",
+                          "Exponent parameter for the Levy flight distribution.",
+                          DoubleValue(2.0),
+                          MakeDoubleAccessor(&LevyFlight2dMobilityModel::m_alpha),
+                          MakeDoubleChecker<double>())
             .AddAttribute("Direction",
                           "A random variable used to pick the direction (radians).",
                           StringValue("ns3::UniformRandomVariable[Min=0.0|Max=6.283184]"),
@@ -57,8 +62,8 @@ TypeId LevyFlight2dMobilityModel::GetTypeId()
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_speed),
                           MakePointerChecker<RandomVariableStream>())
             .AddAttribute("StepSize",
-                          "A random variable used to pick the step size.",
-                          StringValue("ns3::ParetoRandomVariable"),
+                          "A random variable used to pick the speed (m/s).",
+                          StringValue("ns3::UniformRandomVariable[Min=2.0|Max=20.0]"),
                           MakePointerAccessor(&LevyFlight2dMobilityModel::m_stepSize),
                           MakePointerChecker<RandomVariableStream>());
     return tid;
@@ -99,8 +104,8 @@ LevyFlight2dMobilityModel::DoWalk(Time delayLeft)
     Vector position = m_helper.GetCurrentPosition();
     Vector speed = m_helper.GetVelocity();
     Vector nextPosition = position;
-    nextPosition.x += std::pow(m_stepSize->GetValue(), -1.0 / m_alpha) * delayLeft.GetSeconds();
-    nextPosition.y += std::pow(m_stepSize->GetValue(), -1.0 / m_alpha) * delayLeft.GetSeconds();
+    nextPosition.x += speed.x * delayLeft.GetSeconds();
+    nextPosition.y += speed.y * delayLeft.GetSeconds();
 
     m_event.Cancel();
             m_event =
